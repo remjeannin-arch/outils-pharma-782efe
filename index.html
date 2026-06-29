@@ -55,12 +55,23 @@
   }
 
   /* ---------- OUTIL ---------- */
-  main{
-    display:grid; grid-template-columns:380px 1fr; gap:0;
-    height:calc(100vh - 53px);
+  main{ height:calc(100vh - 53px); overflow:auto; background:#aab3c0; }
+  .toolbar{
+    position:sticky; top:0; z-index:6; background:var(--panel);
+    border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; gap:8px; padding:10px 16px;
   }
+  .preview{ padding:22px; display:flex; flex-direction:column; align-items:center; gap:12px; }
+  #doc-stage{ position:relative; background:#fff; box-shadow:0 4px 18px rgba(0,0,0,.25); border-radius:2px; }
+  #overlay{ position:absolute; inset:0; }
+  .ov-input{
+    position:absolute; font:13px/1 Arial,Helvetica,sans-serif; border:none; background:transparent;
+    color:#000; padding:0; margin:0; height:17px; outline:none;
+  }
+  .ov-input:focus{ background:rgba(12,91,189,.10); box-shadow:0 0 0 1px rgba(12,91,189,.30); border-radius:2px; }
+  .ov-check{ position:absolute; cursor:pointer; border-radius:3px; }
+  .ov-check:hover{ background:rgba(12,91,189,.12); }
   .form{overflow:auto; padding:16px 18px; border-right:1px solid var(--border); background:var(--panel)}
-  .preview{overflow:auto; padding:24px; background:#aab3c0; display:flex; flex-direction:column; align-items:center; gap:16px}
+  .preview-legacy{overflow:auto; padding:24px; background:#aab3c0; display:flex; flex-direction:column; align-items:center; gap:16px}
   fieldset{border:1px solid var(--border); border-radius:10px; padding:12px 14px 14px; margin:0 0 16px}
   legend{font-size:12px; font-weight:700; color:var(--accent); padding:0 6px}
   .field{margin-bottom:11px}
@@ -123,18 +134,15 @@
 
 <!-- OUTIL -->
 <main id="tool" hidden>
-  <div class="form">
-    <div id="formfields"></div>
-    <div class="actions">
-      <button class="act primary" id="btn-copy">📋 Copier l'image</button>
-      <button class="act" id="btn-print">🖨️ Imprimer</button>
-      <button class="act" id="btn-png">🖼️ Télécharger PNG</button>
-      <button class="act ghost" id="btn-clear">🗑️ Effacer</button>
-    </div>
+  <div class="toolbar">
+    <button class="act primary" id="btn-copy">📋 Copier l'image</button>
+    <button class="act" id="btn-print">🖨️ Imprimer</button>
+    <button class="act" id="btn-png">🖼️ Télécharger PNG</button>
+    <button class="act ghost" id="btn-clear">🗑️ Effacer</button>
+    <span class="hint" style="margin-left:auto;align-self:center">✍️ Cliquez dans le document pour écrire — cliquez sur une case pour la cocher.</span>
   </div>
   <div class="preview">
-    <div class="canvas-wrap"><canvas id="cv"></canvas></div>
-    <div class="hint">Aperçu fidèle — c'est exactement ce qui sera imprimé / collé.</div>
+    <div id="doc-stage"><canvas id="cv"></canvas><div id="overlay"></div></div>
   </div>
 </main>
 
@@ -158,22 +166,24 @@ function wrap(ctx, text, maxW){
   return lines.length?lines:[''];
 }
 
-function render(ctx, blocks, draw){
+function render(ctx, blocks, draw, zones){
   const cw = PAGE_W - MARGIN*2;
   let y = MARGIN;
+  const edit = !!zones;
   const F=(px,bold)=>`${bold?'bold ':''}${px}px Arial, Helvetica, sans-serif`;
 
-  function line(label,value,x,y,w){
+  function line(label,value,x,y,w,key){
     ctx.font=F(13,true); ctx.fillStyle='#000'; ctx.textBaseline='alphabetic';
     let lx=x;
     if(label){ if(draw) ctx.fillText(label,lx,y); lx+=ctx.measureText(label).width+5; }
     ctx.font=F(13,false);
     const valEnd=x+w;
     if(draw){
-      ctx.fillText(value||'',lx,y);
+      if(!(edit && key)) ctx.fillText(value||'',lx,y);   // en édition, la valeur = input superposé
       ctx.strokeStyle='#888'; ctx.lineWidth=0.6;
       ctx.beginPath(); ctx.moveTo(lx-2,y+4); ctx.lineTo(valEnd,y+4); ctx.stroke();
     }
+    if(edit && key) zones.push({kind:'text', key, x:lx, y, w:Math.max(50,valEnd-lx)});
     return valEnd;
   }
 
@@ -200,11 +210,11 @@ function render(ctx, blocks, draw){
         y+=(b.gap??8);
         break;
       }
-      case 'field':{ line(b.label,b.value,MARGIN,y,cw); y+=26; break; }
+      case 'field':{ line(b.label,b.value,MARGIN,y,cw,b.key); y+=26; break; }
       case 'fieldrow':{
         ctx.textAlign='left';
         const slot=cw/b.items.length;
-        b.items.forEach((it,i)=>line(it.label,it.value,MARGIN+i*slot,y,slot-12));
+        b.items.forEach((it,i)=>line(it.label,it.value,MARGIN+i*slot,y,slot-12,it.key));
         y+=26; break;
       }
       case 'checkbox':{
@@ -214,7 +224,9 @@ function render(ctx, blocks, draw){
         ctx.font=F(12.5,false); ctx.fillStyle='#000'; ctx.textAlign='left';
         const lines=wrap(ctx,b.label,cw-22);
         lines.forEach((ln,i)=>{ if(draw) ctx.fillText(ln,MARGIN+22,y+i*17); });
-        y+=Math.max(22,lines.length*17+6); break;
+        const h=Math.max(22,lines.length*17+6);
+        if(edit && b.key) zones.push({kind:'check', key:b.key, x:MARGIN, y:y-13, w:cw, h:h-3});
+        y+=h; break;
       }
       case 'checkrow':{
         ctx.textAlign='left'; ctx.textBaseline='alphabetic';
@@ -222,11 +234,14 @@ function render(ctx, blocks, draw){
         if(b.label){ ctx.font=F(12.5,true); ctx.fillStyle='#000'; if(draw) ctx.fillText(b.label,x,y); x+=ctx.measureText(b.label).width+14; }
         for(const it of b.items){
           ctx.strokeStyle='#000'; ctx.lineWidth=1;
+          const bx=x;
           if(draw){ ctx.strokeRect(x,y-11,13,13); if(it.checked){ ctx.font=F(13,true); ctx.fillStyle='#000'; ctx.fillText('✕',x+1.5,y); } }
           x+=19;
           ctx.font=F(12.5,false); ctx.fillStyle='#000';
           if(draw) ctx.fillText(it.label,x,y);
-          x+=ctx.measureText(it.label).width+24;
+          const lw=ctx.measureText(it.label).width;
+          if(edit && it.key) zones.push({kind:'check', key:it.key, x:bx, y:y-13, w:19+lw, h:18});
+          x+=lw+24;
         }
         y+=24+(b.gap??0); break;
       }
@@ -251,7 +266,7 @@ function render(ctx, blocks, draw){
    ============================================================ */
 /* Helpers cases à cocher (fiche cystite) */
 const cbItems = arr => arr.map(c=>({key:c.key, label:c.label, type:'checkbox'}));
-const cbBlocks = (arr,d) => arr.map(c=>({type:'checkbox', checked:!!d[c.key], label:c.label}));
+const cbBlocks = (arr,d) => arr.map(c=>({type:'checkbox', key:c.key, checked:!!d[c.key], label:c.label}));
 
 const CYSTITE_URGENCE = [
   {key:'u_fievre', label:"Fièvre rapportée par la patiente (> 38 °C)"},
@@ -303,9 +318,9 @@ function ordoCystiteBlocks(d, t){
     {type:'heading', text:"DISPENSATION PROTOCOLISÉE", size:14, gap:2},
     {type:'heading', text:"Cystite aiguë simple de la femme", size:12, gap:8},
     {type:'paragraph', text:"Délivrance réalisée par le pharmacien dans le cadre du protocole national de prise en charge de la cystite aiguë simple, après vérification de l'éligibilité et réalisation d'un TROD urinaire.", size:11, gap:10},
-    {type:'field', label:'Nom et prénom :', value:d.nom},
-    {type:'field', label:'Date de naissance :', value:d.naissance?formatDate(d.naissance):''},
-    {type:'field', label:'Date de dispensation :', value:d.date?formatDate(d.date):''},
+    {type:'field', key:'nom', label:'Nom et prénom :', value:d.nom},
+    {type:'field', key:'naissance', label:'Date de naissance :', value:d.naissance},
+    {type:'field', key:'date', label:'Date de dispensation :', value:d.date},
     {type:'spacer', h:8},
     {type:'hr', gap:10},
     {type:'paragraph', text:"PRESCRIPTION / DÉLIVRANCE", bold:true, size:12.5, gap:8},
@@ -313,9 +328,9 @@ function ordoCystiteBlocks(d, t){
     {type:'paragraph', text:"Posologie : "+t.poso, size:12, gap:4},
     {type:'paragraph', text:t.qte, size:12, gap:10},
     {type:'paragraph', text:"Conseils : boire abondamment (1,5 à 2 L/jour), uriner régulièrement sans se retenir. Amélioration attendue sous 24 à 48 h. Consulter rapidement en cas de fièvre, frissons, douleurs lombaires, sang abondant dans les urines ou absence d'amélioration à 48–72 h.", size:11, gap:14},
-    {type:'field', label:'Fait à :', value:''},
+    {type:'field', key:'fait_lieu', label:'Fait à :', value:d.fait_lieu},
     {type:'spacer', h:10},
-    {type:'field', label:'Cachet et signature du pharmacien :', value:d.pharmacien||''},
+    {type:'field', key:'pharmacien', label:'Cachet et signature du pharmacien :', value:d.pharmacien||''},
     {type:'spacer', h:24},
     {type:'hr', gap:6},
     {type:'note', text:"Posologie conforme aux schémas du protocole cystite aiguë simple — à vérifier par le pharmacien dispensateur selon les recommandations en vigueur. Document à conserver dans le dossier patient."},
@@ -358,25 +373,25 @@ const DOCUMENTS = {
         {type:'paragraph', text:"DEMANDE DE PRISE EN CHARGE PAR L'ASSURANCE MALADIE D'UN TRAITEMENT MÉDICAMENTEUX DE PLUS D'UN MOIS EN UNE SEULE FOIS POUR SÉJOUR À L'ÉTRANGER", bold:true, size:11.5, gap:3},
         {type:'paragraph', text:"Pour les bénéficiaires du régime général de la Région AURA", bold:true, size:11, gap:10},
         {type:'paragraph', text:"➔ Je soussigné(e), atteste sur l'honneur les renseignements administratifs suivants :", size:12.5, gap:10},
-        {type:'field', label:'Nom et Prénom :', value:d.nom},
-        {type:'field', label:'Adresse :', value:(d.adresse||'').replace(/\n/g,' ')},
-        {type:'field', label:'Téléphone :', value:d.tel},
-        {type:'field', label:"N° d'immatriculation de sécurité sociale :", value:d.nss},
-        {type:'field', label:'Nationalité :', value:d.nationalite},
-        {type:'field', label:'Lieu de séjour :', value:d.lieu},
-        {type:'field', label:'Date de départ :', value:d.date_depart},
-        {type:'field', label:'Durée du séjour :', value:d.duree},
-        {type:'field', label:'Motif du séjour :', value:d.motif},
+        {type:'field', key:'nom', label:'Nom et Prénom :', value:d.nom},
+        {type:'field', key:'adresse', label:'Adresse :', value:(d.adresse||'').replace(/\n/g,' ')},
+        {type:'field', key:'tel', label:'Téléphone :', value:d.tel},
+        {type:'field', key:'nss', label:"N° d'immatriculation de sécurité sociale :", value:d.nss},
+        {type:'field', key:'nationalite', label:'Nationalité :', value:d.nationalite},
+        {type:'field', key:'lieu', label:'Lieu de séjour :', value:d.lieu},
+        {type:'field', key:'date_depart', label:'Date de départ :', value:d.date_depart},
+        {type:'field', key:'duree', label:'Durée du séjour :', value:d.duree},
+        {type:'field', key:'motif', label:'Motif du séjour :', value:d.motif},
         {type:'spacer', h:10},
         {type:'paragraph', text:"➔ Merci de préciser vos dates de séjour(s) à l'étranger effectués depuis le 1ᵉʳ janvier de l'année précédant votre départ (pour un départ prévu en année N, indiquer vos dates de séjours à l'étranger depuis le 1ᵉʳ janvier année N-1) :", size:11.5, gap:8},
-        {type:'fieldrow', items:[{label:'Date de départ :',value:d.s1_dep},{label:'Date de retour :',value:d.s1_ret},{label:'Durée :',value:d.s1_dur}]},
-        {type:'fieldrow', items:[{label:'Date de départ :',value:d.s2_dep},{label:'Date de retour :',value:d.s2_ret},{label:'Durée :',value:d.s2_dur}]},
-        {type:'fieldrow', items:[{label:'Date de départ :',value:d.s3_dep},{label:'Date de retour :',value:d.s3_ret},{label:'Durée :',value:d.s3_dur}]},
+        {type:'fieldrow', items:[{key:'s1_dep',label:'Date de départ :',value:d.s1_dep},{key:'s1_ret',label:'Date de retour :',value:d.s1_ret},{key:'s1_dur',label:'Durée :',value:d.s1_dur}]},
+        {type:'fieldrow', items:[{key:'s2_dep',label:'Date de départ :',value:d.s2_dep},{key:'s2_ret',label:'Date de retour :',value:d.s2_ret},{key:'s2_dur',label:'Durée :',value:d.s2_dur}]},
+        {type:'fieldrow', items:[{key:'s3_dep',label:'Date de départ :',value:d.s3_dep},{key:'s3_ret',label:'Date de retour :',value:d.s3_ret},{key:'s3_dur',label:'Durée :',value:d.s3_dur}]},
         {type:'spacer', h:6},
         {type:'paragraph', text:"En l'absence de séjour à l'étranger sur la période, cocher la case ci-dessous :", size:11.5, gap:6},
-        {type:'checkbox', checked:!!d.aucun, label:"Je n'ai effectué aucun séjour à l'étranger pendant cette période"},
+        {type:'checkbox', key:'aucun', checked:!!d.aucun, label:"Je n'ai effectué aucun séjour à l'étranger pendant cette période"},
         {type:'spacer', h:16},
-        {type:'field', label:'Fait à :', value:(d.fait_a||'') + (d.fait_le?('     le '+formatDate(d.fait_le)):'')},
+        {type:'fieldrow', items:[{key:'fait_a',label:'Fait à :',value:d.fait_a},{key:'fait_le',label:'le :',value:d.fait_le}]},
         {type:'spacer', h:30},
         {type:'paragraph', text:"Signature :", bold:true, size:12, gap:40},
         {type:'hr', gap:8},
@@ -414,32 +429,33 @@ const DOCUMENTS = {
     ],
     blocks(d){
       const typeItems=[
-        {label:'Pharmacie', checked:!!d.type_pharmacie},
-        {label:'Autre'+(d.type_autre_txt?(' : '+d.type_autre_txt):''), checked:!!d.type_autre},
+        {key:'type_pharmacie', label:'Pharmacie', checked:!!d.type_pharmacie},
+        {key:'type_autre', label:'Autre', checked:!!d.type_autre},
       ];
       const payItems=[
-        {label:'Chèque', checked:!!d.pay_cheque},
-        {label:'Espèces', checked:!!d.pay_especes},
+        {key:'pay_cheque', label:'Chèque', checked:!!d.pay_cheque},
+        {key:'pay_especes', label:'Espèces', checked:!!d.pay_especes},
       ];
       return [
         {type:'heading', text:"LOCATION DE MATÉRIEL", size:15, gap:10},
-        {type:'field', label:'Opérateur :', value:d.operateur},
+        {type:'field', key:'operateur', label:'Opérateur :', value:d.operateur},
         {type:'spacer', h:4},
         {type:'heading', text:"Renseignements patients", size:12.5, align:'left', gap:6},
-        {type:'field', label:'NOM / prénom :', value:d.nom},
-        {type:'field', label:'Adresse :', value:(d.adresse||'').replace(/\n/g,' ')},
-        {type:'field', label:'N° TEL :', value:d.tel},
+        {type:'field', key:'nom', label:'NOM / prénom :', value:d.nom},
+        {type:'field', key:'adresse', label:'Adresse :', value:(d.adresse||'').replace(/\n/g,' ')},
+        {type:'field', key:'tel', label:'N° TEL :', value:d.tel},
         {type:'spacer', h:6},
         {type:'heading', text:"LOCATION", size:12.5, align:'left', gap:6},
-        {type:'field', label:'Date ordonnance :', value:d.date_ordo?formatDate(d.date_ordo):''},
-        {type:'field', label:'Durée de location :', value:d.duree},
-        {type:'field', label:'Début de location / date de prolongation :', value:d.debut},
+        {type:'field', key:'date_ordo', label:'Date ordonnance :', value:d.date_ordo},
+        {type:'field', key:'duree', label:'Durée de location :', value:d.duree},
+        {type:'field', key:'debut', label:'Début de location / date de prolongation :', value:d.debut},
         {type:'spacer', h:6},
         {type:'heading', text:"APPAREIL", size:12.5, align:'left', gap:6},
         {type:'checkrow', label:'Type :', items:typeItems},
+        {type:'field', key:'type_autre_txt', label:'Si autre, préciser :', value:d.type_autre_txt},
         {type:'spacer', h:6},
         {type:'heading', text:"CAUTION", size:12.5, align:'left', gap:6},
-        {type:'field', label:'Montant :', value:d.montant},
+        {type:'field', key:'montant', label:'Montant :', value:d.montant},
         {type:'checkrow', items:payItems},
       ];
     }
@@ -472,9 +488,9 @@ const DOCUMENTS = {
     blocks(d){
       const B=[
         {type:'heading', text:"FICHE D'ÉLIGIBILITÉ — TROD CYSTITE", size:14, gap:8},
-        {type:'fieldrow', items:[{label:'Date :', value:d.date?formatDate(d.date):''},{label:'Âge :', value:d.age}]},
-        {type:'field', label:'Nom et Prénom :', value:d.nom},
-        {type:'fieldrow', items:[{label:'Médecin traitant :', value:d.medecin},{label:'N° séc. sociale :', value:d.nss}]},
+        {type:'fieldrow', items:[{key:'date',label:'Date :', value:d.date},{key:'age',label:'Âge :', value:d.age}]},
+        {type:'field', key:'nom', label:'Nom et Prénom :', value:d.nom},
+        {type:'fieldrow', items:[{key:'medecin',label:'Médecin traitant :', value:d.medecin},{key:'nss',label:'N° séc. sociale :', value:d.nss}]},
         {type:'spacer', h:8},
         {type:'paragraph', text:"Critères d'exclusion nécessitant une consultation médicale d'urgence :", bold:true, size:12, gap:6},
       ].concat(cbBlocks(CYSTITE_URGENCE,d));
@@ -484,16 +500,16 @@ const DOCUMENTS = {
       B.push({type:'spacer', h:6});
       B.push({type:'paragraph', text:"Questions à poser dans le cadre de la vérification de l'éligibilité :", bold:true, size:12, gap:6});
       B.push(...cbBlocks(CYSTITE_QUESTIONS,d));
-      if(d.q_allergies_txt) B.push({type:'field', label:'→ Allergies / intolérances :', value:d.q_allergies_txt});
-      if(d.q_traitements_txt) B.push({type:'field', label:'→ Traitements en cours :', value:d.q_traitements_txt});
+      B.push({type:'field', key:'q_allergies_txt', label:'→ Allergies / intolérances :', value:d.q_allergies_txt});
+      B.push({type:'field', key:'q_traitements_txt', label:'→ Traitements en cours :', value:d.q_traitements_txt});
       B.push({type:'spacer', h:6});
       B.push({type:'paragraph', text:"(2) Recherche de signes de gravité :", bold:true, size:12, gap:6});
       B.push(...cbBlocks(CYSTITE_GRAVITE,d));
       B.push({type:'spacer', h:8});
       B.push({type:'paragraph', text:"Accord du patient (ou du représentant légal) pour la réalisation du TROD :", size:12, gap:2});
-      B.push({type:'checkrow', items:[{label:'Oui', checked:!!d.accord_oui},{label:'Non', checked:!!d.accord_non}], gap:6});
+      B.push({type:'checkrow', items:[{key:'accord_oui',label:'Oui', checked:!!d.accord_oui},{key:'accord_non',label:'Non', checked:!!d.accord_non}], gap:6});
       B.push({type:'paragraph', text:"Réalisation d'un TROD cystite :", size:12, gap:2});
-      B.push({type:'checkrow', items:[{label:'Oui', checked:!!d.trod_oui},{label:'Non', checked:!!d.trod_non}]});
+      B.push({type:'checkrow', items:[{key:'trod_oui',label:'Oui', checked:!!d.trod_oui},{key:'trod_non',label:'Non', checked:!!d.trod_non}]});
       B.push({type:'note', text:"Si la réponse est oui, se reporter à la fiche de traçabilité de réalisation du TROD."});
 
       // Note au médecin générée automatiquement selon les critères cochés
@@ -604,15 +620,25 @@ function buildTiles(){
   }
 }
 
+function initData(id){
+  const d={};
+  const today=formatDate(todayISO());
+  for(const sec of DOCUMENTS[id].fields)
+    for(const it of sec.items)
+      for(const f of (it.row||[it]))
+        if(f.type==='date' && f.key!=='naissance') d[f.key]=today;
+  return d;
+}
+
 function openDoc(id){
   currentId=id;
-  data={ fait_le: todayISO() };
+  data=initData(id);
   document.getElementById('home').hidden=true;
   document.getElementById('tool').hidden=false;
   document.getElementById('btn-back').hidden=false;
   document.getElementById('hdr-title').textContent=DOCUMENTS[id].title;
-  document.getElementById('hdr-sub').textContent="Remplir, imprimer ou copier dans Winpharma";
-  buildForm(); draw();
+  document.getElementById('hdr-sub').textContent="Cliquez dans le document pour le remplir";
+  draw();
 }
 
 function showHome(){
@@ -625,46 +651,30 @@ function showHome(){
 }
 document.getElementById('btn-back').addEventListener('click', showHome);
 
-/* ---------- Formulaire ---------- */
-function buildForm(){
-  const doc=DOCUMENTS[currentId];
-  const root=document.getElementById('formfields'); root.innerHTML='';
-  for(const section of doc.fields){
-    const fs=document.createElement('fieldset');
-    const lg=document.createElement('legend'); lg.textContent=section.sec; fs.appendChild(lg);
-    for(const it of section.items){
-      if(it.row){
-        const row=document.createElement('div'); row.className='row';
-        for(const sub of it.row) row.appendChild(makeField(sub));
-        fs.appendChild(row);
-      } else fs.appendChild(makeField(it));
+/* ---------- Saisie directe sur le document (champs superposés) ---------- */
+let currentZones=[];
+function buildOverlays(){
+  const ov=document.getElementById('overlay'); ov.innerHTML='';
+  for(const z of currentZones){
+    if(z.kind==='text'){
+      const inp=document.createElement('input');
+      inp.type='text'; inp.className='ov-input';
+      inp.value=data[z.key]||'';
+      inp.style.left=z.x+'px'; inp.style.top=(z.y-14)+'px'; inp.style.width=z.w+'px';
+      inp.addEventListener('input',e=>{ data[z.key]=e.target.value; });
+      ov.appendChild(inp);
+    } else {
+      const c=document.createElement('div'); c.className='ov-check';
+      c.style.left=z.x+'px'; c.style.top=z.y+'px'; c.style.width=z.w+'px'; c.style.height=z.h+'px';
+      c.title='Cliquer pour cocher / décocher';
+      c.addEventListener('click',()=>{ data[z.key]=!data[z.key]; draw(); });
+      ov.appendChild(c);
     }
-    root.appendChild(fs);
   }
-}
-function makeField(it){
-  const w=document.createElement('div');
-  if(it.type==='checkbox'){
-    w.className='check';
-    const id='f_'+it.key;
-    w.innerHTML=`<input type="checkbox" id="${id}"><label for="${id}" style="margin:0">${it.label}</label>`;
-    w.querySelector('input').checked=!!data[it.key];
-    w.querySelector('input').addEventListener('change',e=>{ data[it.key]=e.target.checked; draw(); });
-    return w;
-  }
-  w.className='field';
-  const lab=document.createElement('label'); lab.textContent=it.label; w.appendChild(lab);
-  let inp;
-  if(it.type==='textarea') inp=document.createElement('textarea');
-  else { inp=document.createElement('input'); inp.type=it.type||'text'; }
-  inp.value=data[it.key]||'';
-  inp.addEventListener('input',e=>{ data[it.key]=e.target.value; draw(); });
-  w.appendChild(inp);
-  return w;
 }
 
 /* ---------- Rendu ---------- */
-function paint(canvas, scale){
+function paint(canvas, scale, zones){
   const c=canvas.getContext('2d');
   const blocks=DOCUMENTS[currentId].blocks(data);
   const h=render(c,blocks,false);
@@ -672,11 +682,18 @@ function paint(canvas, scale){
   canvas.height=Math.round(h*scale);
   c.setTransform(scale,0,0,scale,0,0);
   c.fillStyle='#fff'; c.fillRect(0,0,PAGE_W,h);
-  render(c,blocks,true);
+  render(c,blocks,true,zones);
   return h;
 }
-function draw(){ paint(cv,DPR); cv.style.width=PAGE_W+'px'; }
-function exportCanvas(){ const oc=document.createElement('canvas'); paint(oc,EXPORT_W/PAGE_W); return oc; }
+function draw(){
+  currentZones=[];
+  const h=paint(cv,DPR,currentZones);   // édition : valeurs = inputs superposés
+  cv.style.width=PAGE_W+'px';
+  const stage=document.getElementById('doc-stage');
+  stage.style.width=PAGE_W+'px'; stage.style.height=h+'px';
+  buildOverlays();
+}
+function exportCanvas(){ const oc=document.createElement('canvas'); paint(oc,EXPORT_W/PAGE_W,null); return oc; }
 
 function toast(msg){
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
@@ -712,8 +729,8 @@ document.getElementById('btn-print').addEventListener('click', ()=>{
 });
 document.getElementById('btn-clear').addEventListener('click', ()=>{
   if(!confirm('Effacer toutes les données saisies ?')) return;
-  data={ fait_le: todayISO() };
-  buildForm(); draw(); toast('🗑️ Données effacées');
+  data=initData(currentId);
+  draw(); toast('🗑️ Données effacées');
 });
 
 /* ---------- Init ---------- */
