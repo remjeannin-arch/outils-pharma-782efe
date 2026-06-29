@@ -216,6 +216,20 @@ function render(ctx, blocks, draw){
         lines.forEach((ln,i)=>{ if(draw) ctx.fillText(ln,MARGIN+22,y+i*17); });
         y+=Math.max(22,lines.length*17+6); break;
       }
+      case 'checkrow':{
+        ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+        let x=MARGIN;
+        if(b.label){ ctx.font=F(12.5,true); ctx.fillStyle='#000'; if(draw) ctx.fillText(b.label,x,y); x+=ctx.measureText(b.label).width+14; }
+        for(const it of b.items){
+          ctx.strokeStyle='#000'; ctx.lineWidth=1;
+          if(draw){ ctx.strokeRect(x,y-11,13,13); if(it.checked){ ctx.font=F(13,true); ctx.fillStyle='#000'; ctx.fillText('✕',x+1.5,y); } }
+          x+=19;
+          ctx.font=F(12.5,false); ctx.fillStyle='#000';
+          if(draw) ctx.fillText(it.label,x,y);
+          x+=ctx.measureText(it.label).width+24;
+        }
+        y+=24+(b.gap??0); break;
+      }
       case 'note':{
         ctx.font=F(b.size||9.5,false); ctx.fillStyle='#333'; ctx.textAlign='left';
         for(const ln of wrap(ctx,b.text,cw)){ if(draw) ctx.fillText(ln,MARGIN,y); y+=(b.size||9.5)+4; }
@@ -235,6 +249,44 @@ function render(ctx, blocks, draw){
    DÉFINITION DES DOCUMENTS
    Pour ajouter un doc : une entrée { title, icon, desc, fields, blocks(d) }
    ============================================================ */
+/* Helpers cases à cocher (fiche cystite) */
+const cbItems = arr => arr.map(c=>({key:c.key, label:c.label, type:'checkbox'}));
+const cbBlocks = (arr,d) => arr.map(c=>({type:'checkbox', checked:!!d[c.key], label:c.label}));
+
+const CYSTITE_URGENCE = [
+  {key:'u_fievre', label:"Fièvre rapportée par la patiente (> 38 °C)"},
+  {key:'u_hypo', label:"Hypothermie (ou < 36 °C)"},
+  {key:'u_frissons', label:"Frissons"},
+  {key:'u_pyelo', label:"Autres symptômes suggérant une pyélonéphrite : douleurs au niveau des fosses lombaires ou au niveau des flancs / vomissements / diarrhées / douleurs abdominales"},
+];
+const CYSTITE_EXCL = [
+  {key:'e_masculin', label:"Sexe masculin"},
+  {key:'e_age', label:"Âge < 16 ans ou > 65 ans"},
+  {key:'e_recueil', label:"Recueil insuffisant des informations médicales : non-maîtrise de la langue française, réponses inadaptées"},
+  {key:'e_grossesse', label:"Grossesse avérée ou non exclue"},
+  {key:'e_gyneco', label:"Signes d'appel gynécologique : leucorrhées, prurit vulvaire ou vaginal"},
+  {key:'e_repetition', label:"Cystites à répétition : ≥ 3 épisodes dans les 12 derniers mois"},
+  {key:'e_nonresolue', label:"Épisode de cystite non complètement résolue dans les 15 derniers jours"},
+  {key:'e_anomalie', label:"Anomalie fonctionnelle ou organique de l'arbre urinaire (uropathie, résidu vésical, reflux, lithiase, tumeur, geste chirurgical récent, endoscopique ou sondage…)"},
+  {key:'e_immuno', label:"Immunodépression ou risque d'immunodépression dus à une pathologie (VIH) ou à un médicament (corticothérapie au long cours, chimiothérapie, immunosuppresseurs)"},
+  {key:'e_catheter', label:"Port d'un cathéter veineux implanté"},
+  {key:'e_irc', label:"Insuffisance rénale sévère rapportée par la patiente ou débit de filtration glomérulaire (DFG) < 30 mL/min/1,73 m² selon CKD-EPI"},
+  {key:'e_atb', label:"Antibiothérapie en cours pour une autre pathologie"},
+  {key:'e_fluoro', label:"Prise de fluoroquinolones dans les 3 mois précédents (risque de sélection de germes résistants)"},
+  {key:'e_doute', label:"Doute du pharmacien"},
+];
+const CYSTITE_QUESTIONS = [
+  {key:'q_maladies', label:"Quelles maladies ou interventions chirurgicales avez-vous ou avez-vous eues ?"},
+  {key:'q_allergies', label:"Avez-vous des allergies (notamment aux pénicillines) ou des intolérances médicamenteuses ? Si oui, lesquelles ?"},
+  {key:'q_traitements', label:"Des traitements médicamenteux vous sont-ils prescrits actuellement ? Si oui, lesquels ?"},
+  {key:'q_evenement', label:"Un événement marquant de santé vous a-t-il affecté depuis un an ?"},
+  {key:'q_autrepoint', label:"Souhaitez-vous me signaler un autre point concernant votre santé ?"},
+];
+const CYSTITE_GRAVITE = [
+  {key:'g_temp', label:"Température mesurée par le pharmacien > 38 °C ou < 36 °C"},
+  {key:'g_constantes', label:"Altération franche des constantes mesurées par le pharmacien : Pression Artérielle Systolique < 90 mm Hg, ou Fréquence Cardiaque > 110/mn, ou Fréquence Respiratoire > 20/mn"},
+];
+
 const DOCUMENTS = {
 
   'attestation-etranger-aura': {
@@ -298,6 +350,120 @@ const DOCUMENTS = {
     }
   },
 
+  'location-materiel': {
+    title: "Location de matériel",
+    icon: "📦",
+    desc: "Fiche de location de matériel médical (patient, durée, appareil, caution).",
+    fields: [
+      {sec:"Opérateur", items:[ {key:'operateur', label:'Opérateur'} ]},
+      {sec:"Renseignements patients", items:[
+        {key:'nom', label:'NOM / prénom'},
+        {key:'adresse', label:'Adresse', type:'textarea'},
+        {key:'tel', label:'N° TEL'},
+      ]},
+      {sec:"Location", items:[
+        {key:'date_ordo', label:'Date ordonnance', type:'date'},
+        {key:'duree', label:'Durée de location'},
+        {key:'debut', label:'Début de location / date de prolongation'},
+      ]},
+      {sec:"Appareil — Type", items:[
+        {key:'type_pharmacie', label:'Pharmacie', type:'checkbox'},
+        {key:'type_autre', label:'Autre', type:'checkbox'},
+        {key:'type_autre_txt', label:'Autre (préciser)'},
+      ]},
+      {sec:"Caution", items:[
+        {key:'montant', label:'Montant (€)'},
+        {key:'pay_cheque', label:'Chèque', type:'checkbox'},
+        {key:'pay_especes', label:'Espèces', type:'checkbox'},
+      ]},
+    ],
+    blocks(d){
+      const typeItems=[
+        {label:'Pharmacie', checked:!!d.type_pharmacie},
+        {label:'Autre'+(d.type_autre_txt?(' : '+d.type_autre_txt):''), checked:!!d.type_autre},
+      ];
+      const payItems=[
+        {label:'Chèque', checked:!!d.pay_cheque},
+        {label:'Espèces', checked:!!d.pay_especes},
+      ];
+      return [
+        {type:'heading', text:"LOCATION DE MATÉRIEL", size:15, gap:10},
+        {type:'field', label:'Opérateur :', value:d.operateur},
+        {type:'spacer', h:4},
+        {type:'heading', text:"Renseignements patients", size:12.5, align:'left', gap:6},
+        {type:'field', label:'NOM / prénom :', value:d.nom},
+        {type:'field', label:'Adresse :', value:(d.adresse||'').replace(/\n/g,' ')},
+        {type:'field', label:'N° TEL :', value:d.tel},
+        {type:'spacer', h:6},
+        {type:'heading', text:"LOCATION", size:12.5, align:'left', gap:6},
+        {type:'field', label:'Date ordonnance :', value:d.date_ordo?formatDate(d.date_ordo):''},
+        {type:'field', label:'Durée de location :', value:d.duree},
+        {type:'field', label:'Début de location / date de prolongation :', value:d.debut},
+        {type:'spacer', h:6},
+        {type:'heading', text:"APPAREIL", size:12.5, align:'left', gap:6},
+        {type:'checkrow', label:'Type :', items:typeItems},
+        {type:'spacer', h:6},
+        {type:'heading', text:"CAUTION", size:12.5, align:'left', gap:6},
+        {type:'field', label:'Montant :', value:d.montant},
+        {type:'checkrow', items:payItems},
+      ];
+    }
+  },
+
+  'cystite-eligibilite': {
+    title: "Cystite — éligibilité TROD",
+    icon: "🚺",
+    desc: "Fiche de vérification d'éligibilité et de réalisation du TROD cystite.",
+    fields: [
+      {sec:"Identification", items:[
+        {row:[{key:'date', label:'Date', type:'date'},{key:'age', label:'Âge'}]},
+        {key:'nom', label:'Nom et Prénom'},
+        {row:[{key:'medecin', label:'Médecin traitant'},{key:'nss', label:'N° de sécurité sociale'}]},
+      ]},
+      {sec:"Exclusion — consultation médicale d'urgence", items: cbItems(CYSTITE_URGENCE)},
+      {sec:"(1) Autres critères d'exclusion — consultation < 24h", items: cbItems(CYSTITE_EXCL)},
+      {sec:"Questions de vérification", items: cbItems(CYSTITE_QUESTIONS).concat([
+        {key:'q_allergies_txt', label:'Allergies / intolérances — préciser'},
+        {key:'q_traitements_txt', label:'Traitements en cours — préciser'},
+      ])},
+      {sec:"(2) Signes de gravité", items: cbItems(CYSTITE_GRAVITE)},
+      {sec:"Décision", items:[
+        {key:'accord_oui', label:'Accord du patient : Oui', type:'checkbox'},
+        {key:'accord_non', label:'Accord du patient : Non', type:'checkbox'},
+        {key:'trod_oui', label:'Réalisation TROD cystite : Oui', type:'checkbox'},
+        {key:'trod_non', label:'Réalisation TROD cystite : Non', type:'checkbox'},
+      ]},
+    ],
+    blocks(d){
+      const B=[
+        {type:'heading', text:"FICHE D'ÉLIGIBILITÉ — TROD CYSTITE", size:14, gap:8},
+        {type:'fieldrow', items:[{label:'Date :', value:d.date?formatDate(d.date):''},{label:'Âge :', value:d.age}]},
+        {type:'field', label:'Nom et Prénom :', value:d.nom},
+        {type:'fieldrow', items:[{label:'Médecin traitant :', value:d.medecin},{label:'N° séc. sociale :', value:d.nss}]},
+        {type:'spacer', h:8},
+        {type:'paragraph', text:"Critères d'exclusion nécessitant une consultation médicale d'urgence :", bold:true, size:12, gap:6},
+      ].concat(cbBlocks(CYSTITE_URGENCE,d));
+      B.push({type:'spacer', h:6});
+      B.push({type:'paragraph', text:"(1) Autres critères d'exclusion nécessitant une consultation médicale dans les 24h :", bold:true, size:12, gap:6});
+      B.push(...cbBlocks(CYSTITE_EXCL,d));
+      B.push({type:'spacer', h:6});
+      B.push({type:'paragraph', text:"Questions à poser dans le cadre de la vérification de l'éligibilité :", bold:true, size:12, gap:6});
+      B.push(...cbBlocks(CYSTITE_QUESTIONS,d));
+      if(d.q_allergies_txt) B.push({type:'field', label:'→ Allergies / intolérances :', value:d.q_allergies_txt});
+      if(d.q_traitements_txt) B.push({type:'field', label:'→ Traitements en cours :', value:d.q_traitements_txt});
+      B.push({type:'spacer', h:6});
+      B.push({type:'paragraph', text:"(2) Recherche de signes de gravité :", bold:true, size:12, gap:6});
+      B.push(...cbBlocks(CYSTITE_GRAVITE,d));
+      B.push({type:'spacer', h:8});
+      B.push({type:'paragraph', text:"Accord du patient (ou du représentant légal) pour la réalisation du TROD :", size:12, gap:2});
+      B.push({type:'checkrow', items:[{label:'Oui', checked:!!d.accord_oui},{label:'Non', checked:!!d.accord_non}], gap:6});
+      B.push({type:'paragraph', text:"Réalisation d'un TROD cystite :", size:12, gap:2});
+      B.push({type:'checkrow', items:[{label:'Oui', checked:!!d.trod_oui},{label:'Non', checked:!!d.trod_non}]});
+      B.push({type:'note', text:"Si la réponse est oui, se reporter à la fiche de traçabilité de réalisation du TROD."});
+      return B;
+    }
+  },
+
 };
 
 // Applications/outils intégrés (ouvrent une page dédiée, pas un document canvas)
@@ -308,8 +474,6 @@ const APPS = [
 // Documents prévus (tuiles grisées, pas encore disponibles)
 const COMING_SOON = [
   {icon:"🦠", title:"TROD angine", desc:"Fiche de dispensation après test rapide d'orientation diagnostique angine."},
-  {icon:"🚺", title:"Cystite", desc:"Prise en charge cystite simple à l'officine."},
-  {icon:"📦", title:"Location de matériel", desc:"Contrat / fiche de location de matériel médical."},
 ];
 
 /* ============================================================
