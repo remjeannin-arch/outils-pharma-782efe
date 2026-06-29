@@ -300,6 +300,11 @@ const DOCUMENTS = {
 
 };
 
+// Applications/outils intégrés (ouvrent une page dédiée, pas un document canvas)
+const APPS = [
+  {icon:"🧾", title:"Comptage de caisse", desc:"Compter billets, pièces et rouleaux — total automatique.", url:"./caisse/"},
+];
+
 // Documents prévus (tuiles grisées, pas encore disponibles)
 const COMING_SOON = [
   {icon:"🦠", title:"TROD angine", desc:"Fiche de dispensation après test rapide d'orientation diagnostique angine."},
@@ -335,6 +340,14 @@ function buildTiles(){
       <div class="t-title">${doc.title}</div>
       <div class="t-desc">${doc.desc||''}</div>`;
     t.addEventListener('click',()=>openDoc(id));
+    root.appendChild(t);
+  }
+  for(const a of APPS){
+    const t=document.createElement('div'); t.className='tile';
+    t.innerHTML=`<div class="ico">${a.icon}</div>
+      <div class="t-title">${a.title}</div>
+      <div class="t-desc">${a.desc}</div>`;
+    t.addEventListener('click',()=>{ window.location.href=a.url; });
     root.appendChild(t);
   }
   for(const s of COMING_SOON){
