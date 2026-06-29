@@ -287,6 +287,41 @@ const CYSTITE_GRAVITE = [
   {key:'g_constantes', label:"Altération franche des constantes mesurées par le pharmacien : Pression Artérielle Systolique < 90 mm Hg, ou Fréquence Cardiaque > 110/mn, ou Fréquence Respiratoire > 20/mn"},
 ];
 
+// Ordonnances cystite prêtes — champs communs + générateur de rendu
+const ORDO_CYSTITE_FIELDS = [
+  {sec:"Patiente", items:[
+    {key:'nom', label:'Nom et prénom'},
+    {key:'naissance', label:'Date de naissance', type:'date'},
+    {key:'date', label:'Date de dispensation', type:'date'},
+  ]},
+  {sec:"Pharmacien", items:[
+    {key:'pharmacien', label:'Nom du pharmacien'},
+  ]},
+];
+function ordoCystiteBlocks(d, t){
+  return [
+    {type:'heading', text:"DISPENSATION PROTOCOLISÉE", size:14, gap:2},
+    {type:'heading', text:"Cystite aiguë simple de la femme", size:12, gap:8},
+    {type:'paragraph', text:"Délivrance réalisée par le pharmacien dans le cadre du protocole national de prise en charge de la cystite aiguë simple, après vérification de l'éligibilité et réalisation d'un TROD urinaire.", size:11, gap:10},
+    {type:'field', label:'Nom et prénom :', value:d.nom},
+    {type:'field', label:'Date de naissance :', value:d.naissance?formatDate(d.naissance):''},
+    {type:'field', label:'Date de dispensation :', value:d.date?formatDate(d.date):''},
+    {type:'spacer', h:8},
+    {type:'hr', gap:10},
+    {type:'paragraph', text:"PRESCRIPTION / DÉLIVRANCE", bold:true, size:12.5, gap:8},
+    {type:'paragraph', text:t.dci, bold:true, size:13, gap:4},
+    {type:'paragraph', text:"Posologie : "+t.poso, size:12, gap:4},
+    {type:'paragraph', text:t.qte, size:12, gap:10},
+    {type:'paragraph', text:"Conseils : boire abondamment (1,5 à 2 L/jour), uriner régulièrement sans se retenir. Amélioration attendue sous 24 à 48 h. Consulter rapidement en cas de fièvre, frissons, douleurs lombaires, sang abondant dans les urines ou absence d'amélioration à 48–72 h.", size:11, gap:14},
+    {type:'field', label:'Fait à :', value:''},
+    {type:'spacer', h:10},
+    {type:'field', label:'Cachet et signature du pharmacien :', value:d.pharmacien||''},
+    {type:'spacer', h:24},
+    {type:'hr', gap:6},
+    {type:'note', text:"Posologie conforme aux schémas du protocole cystite aiguë simple — à vérifier par le pharmacien dispensateur selon les recommandations en vigueur. Document à conserver dans le dossier patient."},
+  ];
+}
+
 const DOCUMENTS = {
 
   'attestation-etranger-aura': {
@@ -460,14 +495,59 @@ const DOCUMENTS = {
       B.push({type:'paragraph', text:"Réalisation d'un TROD cystite :", size:12, gap:2});
       B.push({type:'checkrow', items:[{label:'Oui', checked:!!d.trod_oui},{label:'Non', checked:!!d.trod_non}]});
       B.push({type:'note', text:"Si la réponse est oui, se reporter à la fiche de traçabilité de réalisation du TROD."});
+
+      // Note au médecin générée automatiquement selon les critères cochés
+      const alerte = CYSTITE_URGENCE.filter(c=>d[c.key]).concat(CYSTITE_GRAVITE.filter(c=>d[c.key]));
+      const excl   = CYSTITE_EXCL.filter(c=>d[c.key]);
+      if(alerte.length || excl.length){
+        const urgent = alerte.length>0;
+        B.push({type:'spacer', h:16});
+        B.push({type:'hr', gap:8});
+        B.push({type:'heading', text: urgent
+          ? "NOTE AU MÉDECIN — ORIENTATION URGENTE (LE JOUR MÊME)"
+          : "NOTE AU MÉDECIN — CONSULTATION MÉDICALE SOUS 24 H", size:13, gap:8});
+        B.push({type:'paragraph', text:"Cher confrère, chère consœur,", size:12, gap:4});
+        B.push({type:'paragraph', text:`Dans le cadre de l'évaluation d'une suspicion de cystite chez ${d.nom||'la patiente'}${d.age?(', '+d.age+' ans'):''}, la dispensation protocolisée par le pharmacien n'a pas été réalisée. Les éléments relevés ci-dessous justifient une réorientation médicale${urgent?" à caractère urgent (consultation le jour même)":" (consultation sous 24 heures)"} :`, size:12, gap:6});
+        alerte.forEach(c=>B.push({type:'paragraph', text:"•  "+c.label+"   [signe d'alerte]", size:11, gap:2}));
+        excl.forEach(c=>B.push({type:'paragraph', text:"•  "+c.label, size:11, gap:2}));
+        B.push({type:'spacer', h:4});
+        if(urgent) B.push({type:'paragraph', text:"Attention : ces éléments peuvent évoquer une pyélonéphrite ou une situation à risque nécessitant une évaluation médicale rapide.", bold:true, size:11.5, gap:6});
+        B.push({type:'paragraph', text:"Je me tiens à votre disposition pour tout complément. Confraternellement,", size:12, gap:10});
+        B.push({type:'field', label:'Le pharmacien :', value:''});
+      }
       return B;
     }
+  },
+
+  'ordo-cystite-fosfomycine': {
+    title: "Ordonnance cystite — Fosfomycine",
+    icon: "📝",
+    desc: "Ordonnance prête : fosfomycine trométamol 3 g en dose unique (1ʳᵉ intention).",
+    fields: ORDO_CYSTITE_FIELDS,
+    blocks(d){ return ordoCystiteBlocks(d, {
+      dci:"FOSFOMYCINE TROMÉTAMOL 3 g — granulés (1 sachet)",
+      poso:"1 sachet en prise unique, le soir au coucher, après avoir vidé la vessie, à distance des repas (≥ 2 h).",
+      qte:"Quantité délivrée : 1 sachet (traitement minute)",
+    }); }
+  },
+
+  'ordo-cystite-pivmecillinam': {
+    title: "Ordonnance cystite — Pivmécillinam",
+    icon: "📝",
+    desc: "Ordonnance prête : pivmécillinam 400 mg, 2 fois par jour pendant 3 jours.",
+    fields: ORDO_CYSTITE_FIELDS,
+    blocks(d){ return ordoCystiteBlocks(d, {
+      dci:"PIVMÉCILLINAM 400 mg — comprimés",
+      poso:"1 comprimé matin et soir (2 fois par jour) pendant 3 jours, au cours des repas, avec un grand verre d'eau.",
+      qte:"Quantité délivrée : 6 comprimés (3 jours de traitement)",
+    }); }
   },
 
 };
 
 // Applications/outils intégrés (ouvrent une page dédiée, pas un document canvas)
 const APPS = [
+  {icon:"💧", title:"Fiche conseil cystite", desc:"Support patient illustré à imprimer et remettre.", url:"./cystite-conseil/"},
   {icon:"🧾", title:"Comptage de caisse", desc:"Compter billets, pièces et rouleaux — total automatique.", url:"./caisse/"},
 ];
 
