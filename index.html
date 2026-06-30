@@ -776,7 +776,11 @@ document.getElementById('btn-print').addEventListener('click', ()=>{
   const url=exportCanvas().toDataURL('image/png');
   const w=window.open('','_blank');
   w.document.write(`<html><head><title>Impression</title>
-    <style>@page{margin:12mm} body{margin:0} img{width:100%}</style></head>
+    <style>
+      @page{ size:A4; margin:8mm }
+      html,body{ margin:0; padding:0; height:100% }
+      img{ display:block; margin:0 auto; max-width:100%; max-height:281mm; width:auto; height:auto; }
+    </style></head>
     <body><img src="${url}" onload="window.print()"></body></html>`);
   w.document.close();
 });
