@@ -182,7 +182,7 @@ function render(ctx, blocks, draw, zones){
   const edit = !!zones;
   const F=(px,bold)=>`${bold?'bold ':''}${px}px Arial, Helvetica, sans-serif`;
 
-  function line(label,value,x,y,w,key){
+  function line(label,value,x,y,w,key,recompute){
     ctx.font=F(13,true); ctx.fillStyle='#000'; ctx.textBaseline='alphabetic';
     let lx=x;
     if(label){ if(draw) ctx.fillText(label,lx,y); lx+=ctx.measureText(label).width+5; }
@@ -193,7 +193,7 @@ function render(ctx, blocks, draw, zones){
       ctx.strokeStyle='#888'; ctx.lineWidth=0.6;
       ctx.beginPath(); ctx.moveTo(lx-2,y+4); ctx.lineTo(valEnd,y+4); ctx.stroke();
     }
-    if(edit && key) zones.push({kind:'text', key, x:lx, y, w:Math.max(50,valEnd-lx)});
+    if(edit && key) zones.push({kind:'text', key, x:lx, y, w:Math.max(50,valEnd-lx), recompute:!!recompute});
     return valEnd;
   }
 
@@ -220,7 +220,7 @@ function render(ctx, blocks, draw, zones){
         y+=(b.gap??8);
         break;
       }
-      case 'field':{ line(b.label,b.value,MARGIN,y,cw,b.key); y+=26; break; }
+      case 'field':{ line(b.label,b.value,MARGIN,y,cw,b.key,b.recompute); y+=26; break; }
       case 'fieldrow':{
         ctx.textAlign='left';
         const slot=cw/b.items.length;
@@ -359,6 +359,62 @@ function ordoCystiteBlocks(d, t){
     {type:'hr', gap:6},
     {type:'note', text:"Posologie conforme aux schémas du protocole cystite aiguë simple — à vérifier par le pharmacien dispensateur selon les recommandations en vigueur. Document à conserver dans le dossier patient."},
   ];
+}
+
+/* ---- Angine : score de McIsaac, critères, posologies (recos HAS / protocole 2024) ---- */
+const MCISAAC = [
+  {key:'mi_fievre', pts:1, label:"Fièvre > 38 °C  (+1)"},
+  {key:'mi_toux',   pts:1, label:"Absence de toux  (+1)"},
+  {key:'mi_adp',    pts:1, label:"Adénopathies cervicales antérieures sensibles  (+1)"},
+  {key:'mi_amyg',   pts:1, label:"Atteinte amygdalienne : exsudat ou tuméfaction  (+1)"},
+];
+const MCISAAC_AGE = [
+  {key:'mi_age1', pts:1,  label:"Âge 3 à 14 ans  (+1)"},
+  {key:'mi_age2', pts:0,  label:"Âge 15 à 44 ans  (0)"},
+  {key:'mi_age3', pts:-1, label:"Âge 45 ans et plus  (−1)"},
+];
+function mcisaacScore(d){
+  let s=0;
+  MCISAAC.forEach(c=>{ if(d[c.key]) s+=c.pts; });
+  MCISAAC_AGE.forEach(c=>{ if(d[c.key]) s+=c.pts; });
+  return s;
+}
+const ANGINE_URGENCE = [
+  {key:'au_resp', label:"Difficulté à respirer ou à avaler sa salive (hypersialorrhée), voix étouffée, trismus ou phlegmon"},
+  {key:'au_cervical', label:"Gonflement cervical important ou tuméfaction unilatérale du pharynx"},
+  {key:'au_fievre395', label:"Fièvre > 39,5 °C avec troubles digestifs (notamment chez l'enfant)"},
+  {key:'au_aeg', label:"Altération importante de l'état général"},
+];
+const ANGINE_EXCL = [
+  {key:'ae_age', label:"Âge < 10 ans"},
+  {key:'ae_recueil', label:"Recueil insuffisant des informations médicales : non-maîtrise de la langue française, réponses inadaptées"},
+  {key:'ae_grossesse', label:"Grossesse avérée ou non exclue"},
+  {key:'ae_duree', label:"Symptômes évoluant depuis plus de 8 jours"},
+  {key:'ae_recidive', label:"Angine récidivante (≥ 3 épisodes au cours des 6 derniers mois)"},
+  {key:'ae_raa', label:"Antécédent de rhumatisme articulaire aigu (RAA)"},
+  {key:'ae_immuno', label:"Immunodépression (VIH, corticothérapie prolongée, chimiothérapie, immunosuppresseurs)"},
+  {key:'ae_irc', label:"Insuffisance rénale sévère"},
+  {key:'ae_atb', label:"Antibiothérapie en cours pour une autre pathologie"},
+  {key:'ae_doute', label:"Doute du pharmacien"},
+];
+const ANGINE_QUESTIONS = [
+  {key:'aq_maladies', label:"Quelles maladies ou interventions chirurgicales avez-vous ou avez-vous eues ?"},
+  {key:'aq_allergies', label:"Avez-vous des allergies (notamment aux pénicillines / céphalosporines) ou des intolérances ? Si oui, lesquelles ?"},
+  {key:'aq_traitements', label:"Des traitements médicamenteux vous sont-ils prescrits actuellement ? Si oui, lesquels ?"},
+  {key:'aq_evenement', label:"Un événement marquant de santé vous a-t-il affecté depuis un an ?"},
+  {key:'aq_autrepoint', label:"Souhaitez-vous me signaler un autre point concernant votre santé ?"},
+];
+const ANGINE_GRAVITE = [
+  {key:'ag_temp', label:"Température mesurée par le pharmacien > 38 °C ou < 36 °C"},
+  {key:'ag_constantes', label:"Altération franche des constantes : PAS < 90 mm Hg, ou FC > 110/mn, ou FR > 20/mn"},
+];
+function amoxPoso(poids){
+  const p=parseFloat(String(poids||'').replace(',','.'));
+  if(!p || isNaN(p)) return "saisir le poids pour calculer la dose (adulte ou ≥ 40 kg : 2 g/jour).";
+  if(p>=40) return "2 g/jour — 1 g matin et soir, pendant 6 jours (dose adulte).";
+  let mgj=Math.round(50*p); if(mgj>2000) mgj=2000;
+  const pp=Math.round(mgj/2);
+  return `${mgj} mg/jour (50 mg/kg/j) — soit environ ${pp} mg matin et soir, pendant 6 jours.`;
 }
 
 const DOCUMENTS = {
@@ -612,18 +668,141 @@ const DOCUMENTS = {
     }
   },
 
+  'angine-eligibilite': {
+    title: "Angine — éligibilité TROD",
+    icon: "🦠",
+    desc: "Fiche d'éligibilité TROD angine : score de McIsaac auto, critères d'exclusion, note médecin auto.",
+    fields: [
+      {sec:"Identification", items:[
+        {row:[{key:'date', label:'Date', type:'date'},{key:'age', label:'Âge'}]},
+        {key:'nom', label:'Nom et Prénom'},
+        {row:[{key:'medecin', label:'Médecin traitant'},{key:'nss', label:'N° de sécurité sociale'}]},
+      ]},
+      {sec:"Score de McIsaac", items: cbItems(MCISAAC).concat(cbItems(MCISAAC_AGE))},
+      {sec:"Exclusion — consultation urgente", items: cbItems(ANGINE_URGENCE)},
+      {sec:"Autres critères d'exclusion", items: cbItems(ANGINE_EXCL)},
+      {sec:"Questions de vérification", items: cbItems(ANGINE_QUESTIONS).concat([
+        {key:'aq_allergies_txt', label:'Allergies / intolérances — préciser'},
+        {key:'aq_traitements_txt', label:'Traitements en cours — préciser'},
+      ])},
+      {sec:"Signes de gravité", items: cbItems(ANGINE_GRAVITE)},
+      {sec:"Décision", items:[
+        {key:'trod_oui', label:'TROD réalisé : Oui', type:'checkbox'},
+        {key:'trod_non', label:'TROD réalisé : Non', type:'checkbox'},
+        {key:'res_pos', label:'Résultat : Positif', type:'checkbox'},
+        {key:'res_neg', label:'Résultat : Négatif', type:'checkbox'},
+      ]},
+    ],
+    blocks(d){
+      const score=mcisaacScore(d);
+      const B=[
+        {type:'heading', text:"FICHE D'ÉLIGIBILITÉ — TROD ANGINE", size:14, gap:8},
+        {type:'fieldrow', items:[{key:'date',label:'Date :',value:d.date},{key:'age',label:'Âge :',value:d.age}]},
+        {type:'field', key:'nom', label:'Nom et Prénom :', value:d.nom},
+        {type:'fieldrow', items:[{key:'medecin',label:'Médecin traitant :',value:d.medecin},{key:'nss',label:'N° séc. sociale :',value:d.nss}]},
+        {type:'spacer', h:8},
+        {type:'paragraph', text:"Score de McIsaac (cocher les éléments présents) :", bold:true, size:12, gap:6},
+      ].concat(cbBlocks(MCISAAC,d)).concat(cbBlocks(MCISAAC_AGE,d));
+      B.push({type:'paragraph', text:`Score de McIsaac = ${score}`, bold:true, size:13, gap:2});
+      B.push({type:'paragraph', text: score>=2
+        ? "→ Score ≥ 2 : réalisation du TROD angine indiquée."
+        : "→ Score < 2 : TROD non indiqué — angine probablement virale, pas d'antibiotique (traitement symptomatique).", size:11.5, gap:10});
+      B.push({type:'paragraph', text:"Critères d'exclusion nécessitant une consultation médicale urgente :", bold:true, size:12, gap:6});
+      B.push(...cbBlocks(ANGINE_URGENCE,d));
+      B.push({type:'spacer', h:6});
+      B.push({type:'paragraph', text:"Autres critères d'exclusion nécessitant une consultation médicale :", bold:true, size:12, gap:6});
+      B.push(...cbBlocks(ANGINE_EXCL,d));
+      B.push({type:'spacer', h:6});
+      B.push({type:'paragraph', text:"Questions à poser dans le cadre de la vérification de l'éligibilité :", bold:true, size:12, gap:6});
+      B.push(...cbBlocks(ANGINE_QUESTIONS,d));
+      B.push({type:'field', key:'aq_allergies_txt', label:'→ Allergies / intolérances :', value:d.aq_allergies_txt});
+      B.push({type:'field', key:'aq_traitements_txt', label:'→ Traitements en cours :', value:d.aq_traitements_txt});
+      B.push({type:'spacer', h:6});
+      B.push({type:'paragraph', text:"Recherche de signes de gravité :", bold:true, size:12, gap:6});
+      B.push(...cbBlocks(ANGINE_GRAVITE,d));
+      B.push({type:'spacer', h:8});
+      B.push({type:'paragraph', text:"Réalisation du TROD angine :", size:12, gap:2});
+      B.push({type:'checkrow', items:[{key:'trod_oui',label:'Oui',checked:!!d.trod_oui},{key:'trod_non',label:'Non',checked:!!d.trod_non}], gap:6});
+      B.push({type:'paragraph', text:"Résultat du TROD :", size:12, gap:2});
+      B.push({type:'checkrow', items:[{key:'res_pos',label:'Positif (streptocoque A)',checked:!!d.res_pos},{key:'res_neg',label:'Négatif',checked:!!d.res_neg}]});
+      B.push({type:'note', text:"TROD positif → délivrance d'antibiotique selon le protocole (voir « Bon de prise en charge — angine »). TROD négatif → traitement symptomatique, réorientation si pas d'amélioration sous 3 jours."});
+      const alerte = ANGINE_URGENCE.filter(c=>d[c.key]).concat(ANGINE_GRAVITE.filter(c=>d[c.key]));
+      const excl = ANGINE_EXCL.filter(c=>d[c.key]);
+      if(alerte.length || excl.length){
+        const urgent = alerte.length>0;
+        B.push({type:'spacer', h:16});
+        B.push({type:'hr', gap:8});
+        B.push({type:'heading', text: urgent ? "NOTE AU MÉDECIN — ORIENTATION URGENTE (LE JOUR MÊME)" : "NOTE AU MÉDECIN — CONSULTATION MÉDICALE", size:13, gap:8});
+        B.push({type:'paragraph', text:"Cher confrère, chère consœur,", size:12, gap:4});
+        B.push({type:'paragraph', text:`Dans le cadre de l'évaluation d'une suspicion d'angine chez ${d.nom||'le patient'}${d.age?(', '+d.age+' ans'):''}, la dispensation protocolisée par le pharmacien n'a pas été réalisée. Les éléments relevés ci-dessous justifient une réorientation médicale${urgent?" à caractère urgent (consultation le jour même)":""} :`, size:12, gap:6});
+        alerte.forEach(c=>B.push({type:'paragraph', text:"•  "+c.label+"   [signe d'alerte]", size:11, gap:2}));
+        excl.forEach(c=>B.push({type:'paragraph', text:"•  "+c.label, size:11, gap:2}));
+        B.push({type:'spacer', h:4});
+        if(urgent) B.push({type:'paragraph', text:"Attention : ces éléments peuvent évoquer une complication (phlegmon, abcès, sepsis…) nécessitant une évaluation médicale rapide.", bold:true, size:11.5, gap:6});
+        B.push({type:'paragraph', text:"Je me tiens à votre disposition pour tout complément. Confraternellement,", size:12, gap:10});
+        B.push({type:'field', key:'pharm_sign', label:'Le pharmacien :', value:d.pharm_sign});
+      }
+      return B;
+    }
+  },
+
+  'bon-angine': {
+    title: "Bon de prise en charge — angine",
+    icon: "📝",
+    desc: "Bon officiel angine : tampon pré-rempli, dose d'amoxicilline calculée au poids + alternatives.",
+    fields: [
+      {sec:"Bénéficiaire", items:[
+        {key:'date', label:'Date', type:'date'},
+        {key:'nom', label:'Nom et prénom du bénéficiaire'},
+        {row:[{key:'age', label:'Âge'},{key:'poids', label:'Poids (kg)'}]},
+        {key:'abx_amox', label:'Amoxicilline', type:'checkbox'},
+        {key:'abx_cefpo', label:'Cefpodoxime', type:'checkbox'},
+        {key:'abx_cefur', label:'Céfuroxime-axétil', type:'checkbox'},
+        {key:'abx_clari', label:'Clarithromycine', type:'checkbox'},
+      ]},
+    ],
+    blocks(d){
+      return [
+        {type:'heading', text:"Bon de prise en charge des antibiotiques délivrés sans ordonnance (angine)", size:13.5, align:'left', gap:4},
+        {type:'hr', gap:12},
+        {type:'paragraph', text:"Nom du pharmacien et identification de la structure dans laquelle il exerce (tampon de l'officine : nom, adresse, numéro AM) :", size:11, gap:6},
+        {type:'box', w:340, lines:[ {t:PHARMACIE.nom,bold:true}, PHARMACIE.adresse, PHARMACIE.cp_ville, "Tél. "+PHARMACIE.tel, PHARMACIE.email, "N° AM : "+PHARMACIE.am ], gap:18},
+        {type:'field', key:'date', label:'Date :', value:d.date},
+        {type:'spacer', h:6},
+        {type:'field', key:'nom', label:'Nom et prénom du bénéficiaire :', value:d.nom},
+        {type:'fieldrow', items:[{key:'age',label:'Âge :',value:d.age},{key:'poids',label:'Poids (kg) :',value:d.poids, recompute:true}]},
+        {type:'spacer', h:10},
+        {type:'paragraph', text:"Antibiotique délivré (TROD angine positif — cocher) :", bold:true, size:12, gap:8},
+        {type:'checkbox', key:'abx_amox', checked:!!d.abx_amox, label:"Amoxicilline (1ʳᵉ intention)"},
+        {type:'paragraph', text:"→ Posologie : "+amoxPoso(d.poids), size:11, gap:10},
+        {type:'paragraph', text:"En cas d'allergie à la pénicilline (sans contre-indication aux céphalosporines) :", bold:true, size:11.5, gap:6},
+        {type:'checkbox', key:'abx_cefpo', checked:!!d.abx_cefpo, label:"Cefpodoxime — enfant 8 mg/kg/j en 2 prises (max 200 mg/j) pendant 5 j ; adulte 200 mg/j en 2 prises pendant 5 j"},
+        {type:'checkbox', key:'abx_cefur', checked:!!d.abx_cefur, label:"Céfuroxime-axétil (adulte) — 500 mg/j en 2 prises pendant 4 j"},
+        {type:'paragraph', text:"En cas de contre-indication à toutes les bêta-lactamines :", bold:true, size:11.5, gap:6},
+        {type:'checkbox', key:'abx_clari', checked:!!d.abx_clari, label:"Clarithromycine — enfant 15 mg/kg/j en 2 prises (max 500 mg/j) pendant 5 j ; adulte 500 mg/j en 2 prises pendant 5 j"},
+        {type:'spacer', h:10},
+        {type:'paragraph', text:"Conseils de prise :", bold:true, size:12, gap:6},
+        {type:'paragraph', text:"• Respecter la posologie et aller jusqu'au bout du traitement, même si les symptômes disparaissent avant.", size:11, gap:4},
+        {type:'paragraph', text:"• Prendre de préférence au cours des repas. Paracétamol possible contre la douleur et la fièvre.", size:11, gap:4},
+        {type:'paragraph', text:"• Consulter rapidement en cas de fièvre élevée persistante, difficulté à avaler ou à respirer, gonflement du cou, ou absence d'amélioration après 3 jours.", size:11, gap:16},
+        {type:'paragraph', text:"Signature du pharmacien :", bold:true, size:12, gap:44},
+        {type:'hr', gap:8},
+        {type:'note', text:"Délivrance réalisée dans le cadre du protocole national de prise en charge de l'angine à streptocoque A (TROD positif), après vérification de l'éligibilité. Posologies issues des recommandations HAS — à vérifier par le pharmacien dispensateur."},
+      ];
+    }
+  },
+
 };
 
 // Applications/outils intégrés (ouvrent une page dédiée, pas un document canvas)
 const APPS = [
   {icon:"💧", title:"Fiche conseil cystite", desc:"Support patient illustré à imprimer et remettre.", url:"./cystite-conseil/"},
+  {icon:"🌡️", title:"Fiche conseil angine", desc:"Support patient illustré à imprimer et remettre.", url:"./angine-conseil/"},
   {icon:"🧾", title:"Comptage de caisse", desc:"Compter billets, pièces et rouleaux — total automatique.", url:"./caisse/"},
 ];
 
 // Documents prévus (tuiles grisées, pas encore disponibles)
-const COMING_SOON = [
-  {icon:"🦠", title:"TROD angine", desc:"Fiche de dispensation après test rapide d'orientation diagnostique angine."},
-];
+const COMING_SOON = [];
 
 /* ============================================================
    APPLICATION
@@ -714,7 +893,8 @@ function buildOverlays(){
       inp.type='text'; inp.className='ov-input';
       inp.value=data[z.key]||'';
       inp.style.left=z.x+'px'; inp.style.top=(z.y-14)+'px'; inp.style.width=z.w+'px';
-      inp.addEventListener('input',e=>{ data[z.key]=e.target.value; });
+      inp.addEventListener('input',e=>{ data[z.key]=e.target.value; if(z.recompute) repaintCanvas(); });
+      if(z.recompute) inp.addEventListener('change',()=>draw());   // réaligne tout en quittant le champ
       ov.appendChild(inp);
     } else {
       const c=document.createElement('div'); c.className='ov-check';
@@ -747,6 +927,7 @@ function draw(){
   buildOverlays();
 }
 function exportCanvas(){ const oc=document.createElement('canvas'); paint(oc,EXPORT_W/PAGE_W,null); return oc; }
+function repaintCanvas(){ paint(cv,DPR,[]); cv.style.width=PAGE_W+'px'; }  // redessine sans reconstruire les inputs (garde le focus)
 
 function toast(msg){
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');

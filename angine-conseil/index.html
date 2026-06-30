@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Angine — Fiche conseil</title>
+<style>
+  :root{
+    --red:#d7574e; --red-d:#a83c34; --teal:#2f9e8f; --amber:#f0a93b;
+    --ink:#2a2422; --muted:#6d6360; --bg:#f7f4f2; --card:#ffffff; --line:#e9e0dc;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.5;}
+  .bar{position:sticky; top:0; z-index:10; background:#fff; border-bottom:1px solid var(--line);
+    display:flex; gap:10px; align-items:center; padding:8px 14px;}
+  .bar a,.bar button{font:600 13px/1 inherit; padding:8px 13px; border-radius:9px; cursor:pointer;
+    border:1px solid var(--line); background:#fff; color:var(--ink); text-decoration:none;}
+  .bar .print{background:var(--red); border-color:var(--red); color:#fff; margin-left:auto;}
+  .sheet{max-width:820px; margin:18px auto; background:var(--card); border-radius:18px; overflow:hidden;
+    box-shadow:0 8px 30px rgba(215,87,78,.12);}
+  .hero{background:linear-gradient(135deg,var(--red),var(--red-d)); color:#fff; padding:26px 30px;}
+  .hero h1{margin:0; font-size:27px; letter-spacing:-.5px;}
+  .hero p{margin:6px 0 0; font-size:14px; opacity:.93;}
+  .hero .pill{display:inline-block; margin-top:12px; background:rgba(255,255,255,.18);
+    padding:5px 12px; border-radius:20px; font-size:12.5px; font-weight:600;}
+  .body{padding:24px 30px 30px;}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .card{border:1px solid var(--line); border-radius:14px; padding:16px 18px; background:#fff;}
+  .card h2{margin:0 0 8px; font-size:16px; display:flex; align-items:center; gap:9px;}
+  .ico{width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font-size:18px; flex:none;}
+  .i-red{background:#fbe4e1;} .i-teal{background:#dcf1ee;} .i-amber{background:#fcefd7;} .i-green{background:#dff3e6;}
+  .card p,.card li{font-size:13.5px;}
+  ul{margin:6px 0 0; padding-left:18px;} li{margin-bottom:4px;}
+  .full{grid-column:1 / -1;}
+  .science{background:#fdeeec; border:1px dashed var(--red); border-radius:14px; padding:14px 18px; margin-top:16px;}
+  .science b{color:var(--red-d);}
+  .alert{background:#fdecec; border:1px solid #f3b6b4; border-left:6px solid var(--red); border-radius:12px;
+    padding:14px 18px; margin-top:16px;}
+  .alert h2{color:#b0322a;}
+  .steps{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
+  .step{flex:1; min-width:150px; background:#fbf3f2; border:1px solid var(--line); border-radius:12px; padding:12px;}
+  .step .n{font-weight:800; color:var(--red); font-size:18px;}
+  .foot{font-size:11px; color:var(--muted); padding:14px 30px 22px; border-top:1px solid var(--line);}
+  @media print{
+    .bar{display:none;} body{background:#fff;}
+    .sheet{box-shadow:none; margin:0; max-width:none; border-radius:0;}
+    .hero,.ico,.science,.alert,.step{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  }
+  @media (max-width:640px){ .grid{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<div class="bar">
+  <a href="../">← Outils</a>
+  <button class="print" onclick="window.print()">🖨️ Imprimer la fiche</button>
+</div>
+
+<div class="sheet">
+  <div class="hero">
+    <h1>🌡️ L'angine, on vous explique</h1>
+    <p>Un mal de gorge très fréquent, le plus souvent viral. Voici comment aller mieux et quand l'antibiotique est (ou non) utile.</p>
+    <span class="pill">Fiche conseil remise par votre pharmacien</span>
+  </div>
+
+  <div class="body">
+    <div class="grid">
+
+      <div class="card">
+        <h2><span class="ico i-red">🔬</span> C'est quoi ?</h2>
+        <p>L'angine est une <b>inflammation de la gorge et des amygdales</b>. Elle peut être
+        <b>virale</b> (le plus souvent) ou <b>bactérienne</b> (streptocoque). Seule la forme
+        bactérienne justifie un antibiotique.</p>
+      </div>
+
+      <div class="card">
+        <h2><span class="ico i-amber">⚡</span> Les signes</h2>
+        <ul>
+          <li>Mal de gorge, douleur en avalant</li>
+          <li>Fièvre, fatigue</li>
+          <li>Gorge rouge, parfois points blancs</li>
+          <li>Ganglions du cou sensibles</li>
+        </ul>
+      </div>
+
+      <div class="card full">
+        <h2><span class="ico i-teal">🧫</span> Le test (TROD) : pourquoi ?</h2>
+        <p>Un <b>test rapide</b> réalisé sur un prélèvement de gorge dit en quelques minutes si
+        l'angine est due au <b>streptocoque</b>. Résultat <b>positif</b> → un antibiotique est utile.
+        Résultat <b>négatif</b> → l'angine est virale, <b>l'antibiotique est inutile</b> et on traite
+        seulement les symptômes.</p>
+      </div>
+
+      <div class="card full">
+        <h2><span class="ico i-green">💊</span> Le traitement</h2>
+        <div class="steps">
+          <div class="step"><div class="n">1</div>Si antibiotique prescrit : le prendre <b>jusqu'au bout</b> (souvent 6 jours), sans arrêter dès que ça va mieux.</div>
+          <div class="step"><div class="n">2</div>Contre la douleur et la fièvre : <b>paracétamol</b>, en respectant les doses.</div>
+          <div class="step"><div class="n">3</div><b>Repos, hydratation</b>, aliments mous/tièdes. Les symptômes s'améliorent en 2 à 3 jours.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="science">
+      🧪 <b>Le saviez-vous ?</b> Environ <b>8 angines sur 10 sont virales</b> et guérissent
+      spontanément. Le test évite de prendre un antibiotique pour rien — ce qui protège votre
+      flore et limite la résistance des bactéries.
+    </div>
+
+    <div class="alert">
+      <h2><span class="ico i-red">🚨</span> Consultez <u>rapidement</u> un médecin si…</h2>
+      <div class="grid" style="gap:10px">
+        <ul>
+          <li>Difficulté à <b>respirer</b> ou à <b>avaler sa salive</b></li>
+          <li>Voix étouffée, <b>gonflement important du cou</b></li>
+          <li>Impossibilité d'ouvrir la bouche</li>
+        </ul>
+        <ul>
+          <li><b>Fièvre élevée</b> qui persiste, frissons</li>
+          <li>Éruption sur la peau</li>
+          <li>Aucune amélioration après <b>3 jours</b></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    Document d'information destiné aux patients — ne remplace pas un avis médical. En cas de doute
+    ou de persistance des symptômes, consultez votre médecin ou votre pharmacien.
+  </div>
+</div>
+</body>
+</html>
