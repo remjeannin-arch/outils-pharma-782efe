@@ -154,6 +154,16 @@
    ============================================================ */
 const PAGE_W = 820, MARGIN = 52, DPR = 2, EXPORT_W = 1000;
 
+// Coordonnées de l'officine (tampon pré-rempli)
+const PHARMACIE = {
+  nom:"PHARMACIE DE LA PLAINE",
+  adresse:"136 Avenue Paul Santy",
+  cp_ville:"69008 LYON",
+  tel:"04 78 74 14 43",
+  email:"laplainepharmacie@gmail.com",
+  am:"69 2 037 80 7",
+};
+
 function wrap(ctx, text, maxW){
   const words = String(text).split(/\s+/);
   const lines=[]; let cur='';
@@ -253,6 +263,20 @@ function render(ctx, blocks, draw, zones){
       case 'hr':{
         if(draw){ ctx.strokeStyle='#000'; ctx.lineWidth=0.8; ctx.beginPath(); ctx.moveTo(MARGIN,y); ctx.lineTo(PAGE_W-MARGIN,y); ctx.stroke(); }
         y+=(b.gap??12); break;
+      }
+      case 'box':{
+        const bx=(b.x!=null?b.x:MARGIN), bw=(b.w!=null?b.w:cw), pad=10, lh=15;
+        const bh=pad*2+b.lines.length*lh;
+        if(draw){
+          ctx.strokeStyle='#000'; ctx.lineWidth=1; ctx.strokeRect(bx,y,bw,bh);
+          ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+          b.lines.forEach((ln,i)=>{
+            const t=(typeof ln==='string')?ln:ln.t, bold=(typeof ln==='object'&&ln.bold);
+            ctx.font=F(bold?12.5:11, bold); ctx.fillStyle='#000';
+            ctx.fillText(t, bx+pad, y+pad+11+i*lh);
+          });
+        }
+        y+=bh+(b.gap??10); break;
       }
       case 'spacer':{ y+=b.h||14; break; }
     }
@@ -535,28 +559,57 @@ const DOCUMENTS = {
     }
   },
 
-  'ordo-cystite-fosfomycine': {
-    title: "Ordonnance cystite — Fosfomycine",
+  'bon-cystite': {
+    title: "Bon de prise en charge — cystite",
     icon: "📝",
-    desc: "Ordonnance prête : fosfomycine trométamol 3 g en dose unique (1ʳᵉ intention).",
-    fields: ORDO_CYSTITE_FIELDS,
-    blocks(d){ return ordoCystiteBlocks(d, {
-      dci:"FOSFOMYCINE TROMÉTAMOL 3 g — granulés (1 sachet)",
-      poso:"1 sachet en prise unique, le soir au coucher, après avoir vidé la vessie, à distance des repas (≥ 2 h).",
-      qte:"Quantité délivrée : 1 sachet (traitement minute)",
-    }); }
-  },
-
-  'ordo-cystite-pivmecillinam': {
-    title: "Ordonnance cystite — Pivmécillinam",
-    icon: "📝",
-    desc: "Ordonnance prête : pivmécillinam 400 mg, 2 fois par jour pendant 3 jours.",
-    fields: ORDO_CYSTITE_FIELDS,
-    blocks(d){ return ordoCystiteBlocks(d, {
-      dci:"PIVMÉCILLINAM 400 mg — comprimés",
-      poso:"1 comprimé matin et soir (2 fois par jour) pendant 3 jours, au cours des repas, avec un grand verre d'eau.",
-      qte:"Quantité délivrée : 6 comprimés (3 jours de traitement)",
-    }); }
+    desc: "Bon officiel de délivrance d'antibiotique sans ordonnance (cystite). Tampon de l'officine pré-rempli.",
+    fields: [
+      {sec:"Bénéficiaire", items:[
+        {key:'date', label:'Date', type:'date'},
+        {key:'nom', label:'Nom et prénom du bénéficiaire'},
+        {key:'age', label:'Âge du bénéficiaire'},
+        {key:'abx_fosfo', label:'Fosfomycine trométamol 3 g (prise unique)', type:'checkbox'},
+        {key:'abx_pivme', label:'Pivmécillinam 400 mg ×2/j pendant 3 jours', type:'checkbox'},
+      ]},
+    ],
+    blocks(d){
+      const B=[
+        {type:'heading', text:"Bon de prise en charge des antibiotiques délivrés sans ordonnance (cystite)", size:13.5, align:'left', gap:4},
+        {type:'hr', gap:12},
+        {type:'paragraph', text:"Nom du pharmacien et identification de la structure dans laquelle il exerce (tampon de l'officine : nom, adresse, numéro AM) :", size:11, gap:6},
+        {type:'box', w:340, lines:[
+          {t:PHARMACIE.nom, bold:true},
+          PHARMACIE.adresse,
+          PHARMACIE.cp_ville,
+          "Tél. "+PHARMACIE.tel,
+          PHARMACIE.email,
+          "N° AM : "+PHARMACIE.am,
+        ], gap:18},
+        {type:'field', key:'date', label:'Date :', value:d.date},
+        {type:'spacer', h:6},
+        {type:'field', key:'nom', label:'Nom et prénom du bénéficiaire :', value:d.nom},
+        {type:'field', key:'age', label:'Âge du bénéficiaire :', value:d.age},
+        {type:'spacer', h:12},
+        {type:'paragraph', text:"Antibiotique délivré (cocher une seule case) :", bold:true, size:12, gap:10},
+        {type:'checkbox', key:'abx_fosfo', checked:!!d.abx_fosfo, label:"Fosfomycine trométamol 3 g per os en une prise unique"},
+        {type:'paragraph', text:"Ou", size:11.5, gap:4},
+        {type:'checkbox', key:'abx_pivme', checked:!!d.abx_pivme, label:"Pivmécillinam 400 mg per os 2 fois par jour pendant 3 jours"},
+        {type:'spacer', h:10},
+      ];
+      // Conseils de prise (adaptés à l'antibiotique coché)
+      B.push({type:'paragraph', text:"Conseils de prise :", bold:true, size:12, gap:6});
+      if(d.abx_fosfo)
+        B.push({type:'paragraph', text:"• Fosfomycine 3 g : verser le sachet dans un verre d'eau, boire immédiatement, en une seule prise, le soir au coucher après avoir uriné et à distance du dîner (au moins 2 heures après le repas).", size:11, gap:4});
+      if(d.abx_pivme)
+        B.push({type:'paragraph', text:"• Pivmécillinam 400 mg : 1 comprimé matin et soir pendant 3 jours, au cours des repas, avalé avec un grand verre d'eau (rester assis ou debout quelques minutes après la prise). Bien aller jusqu'au bout des 3 jours.", size:11, gap:4});
+      if(!d.abx_fosfo && !d.abx_pivme)
+        B.push({type:'paragraph', text:"• (Cocher l'antibiotique délivré ci-dessus pour afficher le conseil de prise correspondant.)", size:10.5, gap:4});
+      B.push({type:'paragraph', text:"• Boire abondamment (1,5 à 2 L d'eau/jour) et uriner régulièrement. Amélioration attendue sous 24 à 48 h. Consulter rapidement en cas de fièvre, frissons, douleurs dans le bas du dos, sang dans les urines ou absence d'amélioration après 48–72 h.", size:11, gap:16});
+      B.push({type:'paragraph', text:"Signature du pharmacien :", bold:true, size:12, gap:44});
+      B.push({type:'hr', gap:8});
+      B.push({type:'note', text:"Délivrance réalisée dans le cadre du protocole national de prise en charge de la cystite aiguë simple, après vérification de l'éligibilité et réalisation d'un TROD. Posologies à vérifier selon les recommandations en vigueur."});
+      return B;
+    }
   },
 
 };
