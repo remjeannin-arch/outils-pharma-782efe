@@ -417,6 +417,32 @@ function amoxPoso(poids){
   return `${mgj} mg/jour (50 mg/kg/j) — soit environ ${pp} mg matin et soir, pendant 6 jours.`;
 }
 
+/* ---- Dépistage cancer colorectal : auto-questionnaire INCa ---- */
+const CRC_SYMPTOMES = [
+  {key:'sy_sang', label:"Des selles recouvertes ou mêlées de sang rouge clair ou noir"},
+  {key:'sy_douleurs', label:"De fortes douleurs abdominales inexpliquées (gaz, ballonnement, crampes, etc.)"},
+  {key:'sy_transit', label:"Des troubles du transit inexpliqués (diarrhée, constipation inhabituelle, besoin pressant et continuel d'aller à la selle, fausse envie, tension au niveau du rectum, expulsion douloureuse et inefficace)"},
+  {key:'sy_poids', label:"Une perte de poids inexpliquée"},
+  {key:'sy_anemie', label:"Une anémie due à une carence en fer"},
+  {key:'sy_aucun', label:"J'atteste n'avoir aucun des symptômes cités"},
+];
+const CRC_ATCD = [
+  {key:'at_ccr', label:"J'ai ou j'ai eu un cancer colorectal"},
+  {key:'at_adenome', label:"J'ai ou j'ai eu un ou plusieurs adénome(s) avancé(s) (polypes adénomateux)"},
+  {key:'at_mici', label:"J'ai une maladie de Crohn ou une rectocolite hémorragique (MICI)"},
+  {key:'at_predispo', label:"J'ai une maladie prédisposant au cancer colorectal (polypose adénomateuse familiale, syndrome de Lynch)"},
+  {key:'at_parent1', label:"L'un de mes parents au premier degré (père, mère, frère, sœur, enfant) a eu un cancer colorectal et/ou un adénome avancé (polype adénomateux)"},
+  {key:'at_famille', label:"Dans ma famille, il y a des cas de maladies prédisposant au cancer colorectal (polypose adénomateuse familiale, syndrome de Lynch, etc.)"},
+  {key:'at_aucun', label:"J'atteste n'avoir aucun des antécédents personnels et/ou familiaux cités"},
+];
+const CRC_EXAMENS = [
+  {key:'ex_colo5', label:"J'ai eu une coloscopie il y a moins de 5 ans"},
+  {key:'ex_coloprevue', label:"J'ai une coloscopie prévue prochainement"},
+  {key:'ex_coloscanner', label:"J'ai eu un « coloscanner » il y a moins de 2 ans"},
+  {key:'ex_test2', label:"J'ai fait un test de dépistage du cancer colorectal il y a moins de 2 ans"},
+  {key:'ex_aucun', label:"J'atteste n'avoir réalisé aucun des examens cités"},
+];
+
 const DOCUMENTS = {
 
   'attestation-etranger-aura': {
@@ -789,6 +815,71 @@ const DOCUMENTS = {
         {type:'hr', gap:8},
         {type:'note', text:"Délivrance réalisée dans le cadre du protocole national de prise en charge de l'angine à streptocoque A (TROD positif), après vérification de l'éligibilité. Posologies issues des recommandations HAS — à vérifier par le pharmacien dispensateur."},
       ];
+    }
+  },
+
+  'colorectal-questionnaire': {
+    title: "Dépistage colorectal — auto-questionnaire",
+    icon: "🎗️",
+    desc: "Auto-questionnaire d'évaluation du risque (INCa), à remplir avec la personne et imprimer. Aide à l'orientation automatique.",
+    fields: [
+      {sec:"Identification", items:[
+        {row:[{key:'nom', label:'Nom'},{key:'prenom', label:'Prénom'}]},
+        {key:'naissance', label:'Date de naissance (JJ/MM/AAAA)'},
+        {key:'nss', label:'Numéro de Sécurité Sociale'},
+        {key:'inv_oui', label:'Invitation reçue : Oui', type:'checkbox'},
+        {key:'inv_non', label:'Invitation reçue : Non', type:'checkbox'},
+      ]},
+      {sec:"Symptômes ou résultats biologiques", items: cbItems(CRC_SYMPTOMES)},
+      {sec:"Antécédents personnels et/ou familiaux", items: cbItems(CRC_ATCD)},
+      {sec:"Examens médicaux", items: cbItems(CRC_EXAMENS)},
+    ],
+    blocks(d){
+      const B=[
+        {type:'heading', text:"République Française — Institut National du Cancer", size:10, gap:2},
+        {type:'heading', text:"AUTO-QUESTIONNAIRE D'ÉVALUATION DU NIVEAU DE RISQUE DE DÉVELOPPER UN CANCER COLORECTAL", size:12.5, gap:8},
+        {type:'paragraph', text:"Le test de dépistage du cancer colorectal est recommandé aux personnes âgées de 50 à 74 ans sans symptôme, ni antécédent, ni facteur de risque particulier.", size:10.5, gap:4},
+        {type:'paragraph', text:"Ce questionnaire vise à vous interroger sur vos symptômes, vos antécédents personnels et/ou familiaux ainsi que sur la réalisation d'examens médicaux, afin que le pharmacien puisse déterminer si vous êtes concerné par le test de dépistage. Ce questionnaire ne remplace pas l'avis d'un médecin.", size:10.5, gap:10},
+        {type:'heading', text:"Votre identification", size:12, align:'left', gap:6},
+        {type:'fieldrow', items:[{key:'nom',label:'Nom :',value:d.nom},{key:'prenom',label:'Prénom :',value:d.prenom}]},
+        {type:'field', key:'naissance', label:'Date de naissance (JJ/MM/AAAA) :', value:d.naissance},
+        {type:'field', key:'nss', label:'Numéro de Sécurité Sociale :', value:d.nss},
+        {type:'checkrow', label:"Avez-vous reçu une invitation au dépistage du cancer colorectal :", items:[{key:'inv_oui',label:'Oui',checked:!!d.inv_oui},{key:'inv_non',label:'Non',checked:!!d.inv_non}], gap:8},
+        {type:'heading', text:"Vos symptômes ou résultats biologiques", size:12, align:'left', gap:2},
+        {type:'paragraph', text:"Veuillez sélectionner au moins une affirmation. Avez-vous eu récemment :", size:10.5, gap:6},
+      ].concat(cbBlocks(CRC_SYMPTOMES,d));
+      B.push({type:'spacer', h:6});
+      B.push({type:'heading', text:"Antécédents personnels et/ou familiaux", size:12, align:'left', gap:2});
+      B.push({type:'paragraph', text:"Veuillez sélectionner au moins une affirmation :", size:10.5, gap:6});
+      B.push(...cbBlocks(CRC_ATCD,d));
+      B.push({type:'spacer', h:6});
+      B.push({type:'heading', text:"Examens médicaux", size:12, align:'left', gap:2});
+      B.push({type:'paragraph', text:"Veuillez sélectionner au moins une affirmation :", size:10.5, gap:6});
+      B.push(...cbBlocks(CRC_EXAMENS,d));
+      B.push({type:'spacer', h:6});
+      B.push({type:'note', text:"Merci de remettre ce questionnaire à votre pharmacien."});
+
+      // Aide à l'orientation (pharmacien) — d'après le circuit officiel « Qui dépister »
+      const symp = ['sy_sang','sy_douleurs','sy_transit','sy_poids','sy_anemie'].some(k=>d[k]);
+      const atcd = ['at_ccr','at_adenome','at_mici','at_predispo','at_parent1','at_famille'].some(k=>d[k]);
+      const exam = ['ex_colo5','ex_coloprevue','ex_coloscanner','ex_test2'].some(k=>d[k]);
+      B.push({type:'spacer', h:12});
+      B.push({type:'hr', gap:8});
+      B.push({type:'heading', text:"AIDE À L'ORIENTATION (réservé au pharmacien)", size:12, align:'left', gap:6});
+      if(symp){
+        B.push({type:'paragraph', text:"• Symptôme(s) signalé(s) → ne pas remettre de kit. Orienter vers une consultation médicale (exploration coloscopique).", size:11, gap:4});
+      }
+      if(atcd){
+        B.push({type:'paragraph', text:"• Antécédent personnel et/ou familial → personne à risque élevé ou très élevé. Ne pas remettre de kit : orienter vers le médecin traitant ou un gastro-entérologue pour un suivi spécifique.", size:11, gap:4});
+      }
+      if(exam){
+        B.push({type:'paragraph', text:"• Examen / test de dépistage déjà réalisé récemment → ne pas remettre de kit (personne déjà couverte).", size:11, gap:4});
+      }
+      if(!symp && !atcd && !exam){
+        B.push({type:'paragraph', text:"• Aucun symptôme, antécédent ni examen récent signalé → personne éligible à la remise du kit de dépistage (si âge 50–74 ans). Vérifier l'âge et remettre le kit.", bold:true, size:11, gap:4});
+      }
+      B.push({type:'note', text:"Rappel : le dépistage organisé concerne les 50–74 ans sans symptôme, sans antécédent et sans examen récent. Cette aide ne remplace pas l'appréciation du pharmacien."});
+      return B;
     }
   },
 
