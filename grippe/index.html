@@ -239,7 +239,7 @@
         <li><b>Grippe déjà contractée</b> : vacciner quand même (couverture plus large, pas de délai).</li>
         <li><b>Femme enceinte</b> : à tout moment de la grossesse, protège aussi le bébé jusqu'à ses 6 mois. Injection à 100 % du 6e mois jusqu'à 12 jours après l'accouchement.</li>
         <li><b>Autre vaccin dans les 15 derniers jours</b> : signaler au pharmacien ; aucune règle de délai n'est définie <span class="tag t-amber">conduite à confirmer</span>.</li>
-        <li><b>Non éligible adulte</b> : vaccin et injection non pris en charge, pas de bon, prescription obligatoire (le pharmacien peut prescrire).</li>
+        <li><b>Non éligible adulte</b> : vaccin et injection non pris en charge, pas de bon, prescription obligatoire (le pharmacien peut prescrire) → document « <a href="../#ordonnance-grippe" target="_blank">Ordonnance vaccin grippe (non éligible)</a> » avec tampon pré-rempli. Le patient paie le vaccin et l'injection au comptoir.</li>
         <li><b>11 à 17 ans sans comorbidité</b> : vaccination proposée, prise en charge à 65 % avec le bon 610f édité par le professionnel.</li>
       </ul>
     </details>
@@ -418,7 +418,7 @@ function compute(){
     vig.push("11 à 17 ans sans comorbidité : vaccination proposée, bon 610f à éditer (prescription possible par le pharmacien).");
   } else {
     pec = 'non prise en charge (vaccin et injection), pas de bon';
-    bonNote = 'prescription obligatoire (le pharmacien peut prescrire)';
+    bonNote = 'prescription obligatoire, le pharmacien peut la rédiger : <div class="btns noprint"><a class="btn primary" href="../#ordonnance-grippe" target="_blank">📝 Ouvrir l\'ordonnance pharmacien</a></div>';
     vig.push("Adulte non éligible : <b>prescription obligatoire</b> (le pharmacien peut prescrire).");
   }
 

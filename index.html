@@ -818,6 +818,46 @@ const DOCUMENTS = {
     }
   },
 
+  'ordonnance-grippe': {
+    title: "Ordonnance vaccin grippe (non éligible)",
+    icon: "💉",
+    desc: "Prescription pharmaceutique du vaccin grippal pour un patient non éligible (vaccin et injection à sa charge). Tampon pré-rempli.",
+    fields: [
+      {sec:"Patient", items:[
+        {key:'date', label:'Date', type:'date'},
+        {key:'nom', label:'Nom et prénom du patient'},
+        {key:'naissance', label:'Date de naissance'},
+        {key:'vac_flucelvax', label:'FLUCELVAX', type:'checkbox'},
+        {key:'vac_fluad', label:'FLUAD (65 ans et plus)', type:'checkbox'},
+        {key:'inj_officine', label:"Injection à l'officine par le pharmacien", type:'checkbox'},
+      ]},
+    ],
+    blocks(d){
+      return [
+        {type:'heading', text:"ORDONNANCE — Prescription pharmaceutique d'un vaccin", size:14, gap:2},
+        {type:'heading', text:"Vaccination contre la grippe saisonnière — campagne 2026-2027", size:11.5, gap:4},
+        {type:'hr', gap:12},
+        {type:'paragraph', text:"Pharmacien prescripteur et identification de l'officine :", size:11, gap:6},
+        {type:'box', w:340, lines:[ {t:PHARMACIE.nom,bold:true}, PHARMACIE.adresse, PHARMACIE.cp_ville, "Tél. "+PHARMACIE.tel, PHARMACIE.email, "N° AM : "+PHARMACIE.am ], gap:18},
+        {type:'field', key:'date', label:'Date :', value:d.date},
+        {type:'spacer', h:6},
+        {type:'field', key:'nom', label:'Nom et prénom du patient :', value:d.nom},
+        {type:'field', key:'naissance', label:'Date de naissance :', value:d.naissance},
+        {type:'spacer', h:10},
+        {type:'paragraph', text:"Vaccin prescrit (cocher) :", bold:true, size:12, gap:8},
+        {type:'checkbox', key:'vac_flucelvax', checked:!!d.vac_flucelvax, label:"FLUCELVAX, vaccin grippal inactivé (culture cellulaire) — 1 dose, voie intramusculaire"},
+        {type:'checkbox', key:'vac_fluad', checked:!!d.vac_fluad, label:"FLUAD, vaccin grippal adjuvanté (65 ans et plus) — 1 dose, voie intramusculaire"},
+        {type:'spacer', h:6},
+        {type:'checkbox', key:'inj_officine', checked:!!d.inj_officine, label:"Injection réalisée à l'officine par le pharmacien"},
+        {type:'spacer', h:10},
+        {type:'paragraph', text:"Patient ne relevant pas des populations ciblées par les recommandations vaccinales : vaccin et injection non pris en charge par l'Assurance Maladie, à la charge du patient. Pas de bon de prise en charge.", size:11, gap:16},
+        {type:'paragraph', text:"Signature et cachet du pharmacien :", bold:true, size:12, gap:44},
+        {type:'hr', gap:8},
+        {type:'note', text:"Prescription réalisée par le pharmacien d'officine dans le cadre de ses compétences vaccinales (décret n° 2023-736 et arrêtés du 8 août 2023), après vérification de l'absence de contre-indication. Ordonnance valable pour la campagne 2026-2027."},
+      ];
+    }
+  },
+
   'colorectal-questionnaire': {
     title: "Dépistage colorectal — auto-questionnaire",
     icon: "🎗️",
@@ -1065,12 +1105,12 @@ document.getElementById('btn-clear').addEventListener('click', ()=>{
 
 /* ---------- Init ---------- */
 buildTiles();
+showHome();
 // Ouverture directe d'un document par URL : index.html#id-du-document
 (function(){
   const h=(location.hash||'').replace(/^#/,'');
   if(h && DOCUMENTS[h]) openDoc(h);
 })();
-showHome();
 </script>
 </body>
 </html>

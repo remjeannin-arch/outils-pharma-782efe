@@ -68,4 +68,6 @@ sortir**, points de vigilance). Les bons officiels CNAM (610d, 610d-ALD, 610e, 6
 naissance, code organisme) **dans le navigateur** avec pdf-lib (CDN cdnjs) puis l'ouvre dans un
 onglet : rien n'est envoyé ni stocké. Règles « à confirmer » signalées en orange dans la page.
 Mise à jour des bons : remplacer les PDF dans `grippe/bons/` (mêmes noms).
+Adulte non éligible (vaccin et injection payés par le patient) : le module renvoie vers le
+document canvas `ordonnance-grippe` (prescription pharmaceutique, tampon pré-rempli).
 L'accueil accepte `index.html#id-du-document` pour ouvrir directement un document canvas.
