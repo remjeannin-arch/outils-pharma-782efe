@@ -52,7 +52,20 @@ persistants. Rester en `build_type=workflow`.
 | Document | Statut |
 |---|---|
 | Attestation séjour à l'étranger (traitement > 1 mois, régime général AURA) | ✅ Disponible |
-| TROD angine | 🔜 À venir |
-| Cystite | 🔜 À venir |
-| Location de matériel | 🔜 À venir |
-| Module de caisse | 🔜 À définir |
+| Location de matériel | ✅ Disponible |
+| Pack cystite (éligibilité TROD, bon de prise en charge, fiche conseil) | ✅ Disponible |
+| Pack angine (éligibilité McIsaac, bon de prise en charge, fiche conseil) | ✅ Disponible |
+| Dépistage cancer colorectal (auto-questionnaire INCa) | ✅ Disponible |
+| Comptage de caisse (`/caisse/`) | ✅ Disponible |
+| Vaccination grippe 2026-2027 (`/grippe/`) | ✅ Disponible |
+
+## Module vaccination grippe (`grippe/`)
+Aide à la décision au comptoir (campagne 2026-2027, Flucelvax / Fluad) : questions dans
+l'ordre de la procédure, conclusion mise à jour en direct (vaccin, prise en charge, **bon à
+sortir**, points de vigilance). Les bons officiels CNAM (610d, 610d-ALD, 610e, 610e-ALD, 610f,
+611 — version 07/2026, valables jusqu'au 31/01/2027) sont dans `grippe/bons/`. Le bouton
+« Ouvrir le bon pré-rempli » remplit les champs d'en-tête du PDF (NIR, bénéficiaire, date de
+naissance, code organisme) **dans le navigateur** avec pdf-lib (CDN cdnjs) puis l'ouvre dans un
+onglet : rien n'est envoyé ni stocké. Règles « à confirmer » signalées en orange dans la page.
+Mise à jour des bons : remplacer les PDF dans `grippe/bons/` (mêmes noms).
+L'accueil accepte `index.html#id-du-document` pour ouvrir directement un document canvas.

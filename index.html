@@ -889,6 +889,7 @@ const DOCUMENTS = {
 const APPS = [
   {icon:"💧", title:"Fiche conseil cystite", desc:"Support patient illustré à imprimer et remettre.", url:"./cystite-conseil/"},
   {icon:"🌡️", title:"Fiche conseil angine", desc:"Support patient illustré à imprimer et remettre.", url:"./angine-conseil/"},
+  {icon:"💉", title:"Vaccination grippe 2026-2027", desc:"Aide à la décision au comptoir : éligibilité, Flucelvax ou Fluad, bon à sortir, points de vigilance.", url:"./grippe/"},
   {icon:"🧾", title:"Comptage de caisse", desc:"Compter billets, pièces et rouleaux — total automatique.", url:"./caisse/"},
 ];
 
@@ -1064,6 +1065,11 @@ document.getElementById('btn-clear').addEventListener('click', ()=>{
 
 /* ---------- Init ---------- */
 buildTiles();
+// Ouverture directe d'un document par URL : index.html#id-du-document
+(function(){
+  const h=(location.hash||'').replace(/^#/,'');
+  if(h && DOCUMENTS[h]) openDoc(h);
+})();
 showHome();
 </script>
 </body>

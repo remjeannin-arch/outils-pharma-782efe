@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vaccination grippe 2026-2027 — aide à la décision</title>
+<style>
+  :root{
+    --blue:#2b6cb0; --blue-d:#1f4f85; --teal:#2f9e8f; --amber:#d9931c; --red:#c84b42; --green:#2f8f4e;
+    --ink:#22262b; --muted:#66707a; --bg:#f3f6f9; --card:#fff; --line:#dfe6ee;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.5;}
+  .bar{position:sticky; top:0; z-index:10; background:#fff; border-bottom:1px solid var(--line);
+    display:flex; gap:10px; align-items:center; padding:8px 14px; flex-wrap:wrap;}
+  .bar a,.bar button{font:600 13px/1 inherit; padding:8px 13px; border-radius:9px; cursor:pointer;
+    border:1px solid var(--line); background:#fff; color:var(--ink); text-decoration:none;}
+  .bar .primary{background:var(--blue); border-color:var(--blue); color:#fff;}
+  .bar .right{margin-left:auto; display:flex; gap:8px;}
+  .wrap{max-width:860px; margin:18px auto; padding:0 14px;}
+  .hero{background:linear-gradient(135deg,var(--blue),var(--blue-d)); color:#fff; padding:22px 26px; border-radius:18px;}
+  .hero h1{margin:0; font-size:24px; letter-spacing:-.4px;}
+  .hero p{margin:6px 0 0; font-size:13.5px; opacity:.93;}
+  .hero .pill{display:inline-block; margin-top:10px; background:rgba(255,255,255,.18);
+    padding:4px 11px; border-radius:20px; font-size:12px; font-weight:600;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 20px; margin-top:14px;}
+  .card h2{margin:0 0 10px; font-size:16px; display:flex; align-items:center; gap:9px;}
+  .step-n{display:inline-grid; place-items:center; width:26px; height:26px; border-radius:8px;
+    background:#e3edf8; color:var(--blue-d); font-weight:800; font-size:13px; flex:none;}
+  .q{margin:12px 0 4px; font-weight:600; font-size:14.5px;}
+  .hint{font-size:12.5px; color:var(--muted); margin:0 0 6px;}
+  .opts{display:flex; gap:8px; flex-wrap:wrap;}
+  .opt{border:1.5px solid var(--line); background:#fff; border-radius:10px; padding:8px 14px; cursor:pointer;
+    font:600 13.5px/1.2 inherit; color:var(--ink);}
+  .opt:hover{border-color:var(--blue);}
+  .opt.on{background:var(--blue); border-color:var(--blue); color:#fff;}
+  .checks{display:grid; grid-template-columns:1fr 1fr; gap:6px 14px;}
+  .checks label{display:flex; gap:9px; align-items:flex-start; font-size:13.5px; cursor:pointer; padding:5px 0;}
+  .checks input{margin-top:3px; width:16px; height:16px; flex:none;}
+  .checks label.auto{color:var(--muted);}
+  input[type=number], input[type=text]{font:inherit; font-size:15px; padding:8px 11px; border:1.5px solid var(--line);
+    border-radius:10px; width:140px; background:#fff;}
+  input[type=text]{width:100%; max-width:420px;}
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .unit{font-size:13px; color:var(--muted);}
+  .locked{opacity:.55; pointer-events:none;}
+  .hidden{display:none !important;}
+  .verdict{border-radius:16px; padding:18px 20px; margin-top:14px; border:1.5px solid;}
+  .v-ok{background:#eaf5ee; border-color:#a8d5b7;}
+  .v-warn{background:#fdf3e2; border-color:#f0cf93;}
+  .v-stop{background:#fdecea; border-color:#f1b5b0;}
+  .v-wait{background:#f6f8fb; border-color:var(--line); color:var(--muted);}
+  .verdict h2{margin:0 0 8px; font-size:17px;}
+  .verdict .line{margin:6px 0; font-size:14.5px;}
+  .verdict .line b{display:inline-block; min-width:150px;}
+  .verdict ul{margin:4px 0 0; padding-left:20px; font-size:13.5px;}
+  .verdict li{margin-bottom:3px;}
+  .verdict .confirm{color:var(--amber); font-weight:600;}
+  .verdict .final{margin-top:12px; font-weight:700; font-size:13.5px; border-top:1px dashed rgba(0,0,0,.15); padding-top:10px;}
+  .verdict .bon{background:rgba(255,255,255,.7); border-radius:12px; padding:10px 12px; margin:10px 0;}
+  .verdict .bon .code{font-weight:800; color:var(--blue-d); font-size:15px;}
+  .tag{display:inline-block; font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px; margin-left:6px; vertical-align:middle;}
+  .t-amber{background:#fdf3e2; color:#a46a0b; border:1px solid #f0cf93;}
+  /* pré-remplissage du bon */
+  .fill{margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px 12px;}
+  .fill label{font-size:12.5px; color:var(--muted); display:block;}
+  .fill input{width:100%; max-width:none; font-size:14px; padding:7px 10px;}
+  .fill .full{grid-column:1 / -1;}
+  .btns{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  .btn{display:inline-block; font:600 13px/1 inherit; padding:9px 13px; border-radius:9px; cursor:pointer;
+    border:1px solid var(--line); background:#fff; color:var(--ink); text-decoration:none;}
+  .btn.primary{background:var(--blue); border-color:var(--blue); color:#fff;}
+  .btn.ghost{background:transparent;}
+  .status{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .memo{margin-top:14px;}
+  .memo details{background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px 18px; margin-top:8px;}
+  .memo summary{cursor:pointer; font-weight:700; font-size:14.5px;}
+  .memo p,.memo li,.memo td,.memo th{font-size:13.5px;}
+  .memo ul{margin:6px 0 0; padding-left:18px;}
+  .memo table{border-collapse:collapse; width:100%; margin-top:8px;}
+  .memo th,.memo td{border-bottom:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top;}
+  .memo th{background:#f3f6f9;}
+  .foot{font-size:11.5px; color:var(--muted); padding:16px 4px 26px;}
+  @media (max-width:640px){ .checks,.fill{grid-template-columns:1fr;} .verdict .line b{display:block; min-width:0;} }
+  @media print{
+    @page{ size:A4; margin:12mm }
+    .bar,.memo,.noprint,.fill,.btns,.status{display:none;} body{background:#fff;}
+    .wrap{max-width:none; margin:0; padding:0;}
+    .card,.verdict,.hero{break-inside:avoid; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    .hero{border-radius:10px; padding:14px 18px;} .hero h1{font-size:19px;}
+    .card{padding:10px 14px; margin-top:8px;} .q{margin:6px 0 2px; font-size:13px;}
+    .opt{padding:4px 9px; font-size:12px;} .opt:not(.on){display:none;}
+    .hint{display:none;} .checks label:not(.checked){display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="bar">
+  <a href="../">← Outils</a>
+  <span style="font-size:13px;color:var(--muted)">Grippe 2026-2027 · Flucelvax / Fluad</span>
+  <div class="right">
+    <button onclick="resetAll()">🗑️ Nouveau patient</button>
+    <button class="primary" onclick="window.print()">🖨️ Imprimer la synthèse</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>💉 Vaccination grippe — aide à la décision au comptoir</h1>
+    <p>Campagne 2026-2027. Répondez aux questions dans l'ordre : le vaccin proposé, la prise en charge, le bon à sortir et les points de vigilance se mettent à jour en direct. Rien n'est enregistré.</p>
+    <span class="pill">Aide à la décision — le pharmacien reste responsable de la décision finale</span>
+  </div>
+
+  <!-- ÉTAPE 1 : ÂGE -->
+  <div class="card" id="s1">
+    <h2><span class="step-n">1</span> Âge du patient</h2>
+    <div class="row">
+      <input type="number" id="age" min="0" max="120" step="1" placeholder="ex. 72" oninput="onAge()">
+      <span class="unit">ans</span>
+      <span class="unit" id="age-months-wrap" style="display:none">— si moins de 1 an : <input type="number" id="months" min="0" max="11" style="width:70px" placeholder="mois" oninput="compute()"> mois</span>
+    </div>
+    <p class="hint" style="margin-top:6px">Moins de 6 mois : aucun vaccin · 6 mois à 10 ans : pas de vaccination à l'officine · 11 ans et plus : on continue.</p>
+  </div>
+
+  <!-- ÉTAPE 2 : PRISE EN CHARGE -->
+  <div class="card locked" id="s2">
+    <h2><span class="step-n">2</span> Prise en charge</h2>
+    <div class="q">Femme enceinte ?</div>
+    <div class="opts" data-key="enceinte">
+      <button class="opt" data-v="oui">Oui</button><button class="opt" data-v="non">Non</button>
+    </div>
+    <div class="q">Critères de prise en charge (cocher tout ce qui s'applique)</div>
+    <div class="checks" id="crit">
+      <label class="auto" id="lbl-age65"><input type="checkbox" data-c="age65" disabled> 65 ans et plus <span class="hint" style="margin:0">(automatique)</span></label>
+      <label class="auto" id="lbl-enc"><input type="checkbox" data-c="enc" disabled> Femme enceinte, quel que soit le terme <span class="hint" style="margin:0">(automatique)</span></label>
+      <label><input type="checkbox" data-c="chronique"> Maladie chronique (respiratoire, cardiaque, neurologique, rénale, diabète, immunodépression, cancer…) ou ALD concernée</label>
+      <label><input type="checkbox" data-c="obesite"> Obésité (IMC ≥ 40)</label>
+      <label><input type="checkbox" data-c="etab"> Personne en établissement de soins de suite ou médico-social</label>
+      <label><input type="checkbox" data-c="entourage"> Entourage d'un nourrisson &lt; 6 mois à risque ou d'une personne immunodéprimée</label>
+      <label><input type="checkbox" data-c="pro"> Professionnel de santé / en contact avec des personnes à risque</label>
+    </div>
+    <div id="ald-wrap">
+      <div class="q">Patient en ALD ciblée (exonérante) ?</div>
+      <p class="hint">Détermine le bon : avec ALD ciblée, l'injection est aussi prise en charge à 100 % (bon « ALD »). Sinon le patient règle le ticket modérateur de l'injection.</p>
+      <div class="opts" data-key="ald">
+        <button class="opt" data-v="oui">Oui</button><button class="opt" data-v="non">Non</button>
+      </div>
+    </div>
+    <div id="bon-wrap">
+      <div class="q">Bon de prise en charge déjà reçu ?</div>
+      <div class="opts" data-key="bon">
+        <button class="opt" data-v="oui">Oui</button><button class="opt" data-v="non">Non</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ÉTAPE 3 : SÉCURITÉ -->
+  <div class="card locked" id="s3">
+    <h2><span class="step-n">3</span> Sécurité avant injection</h2>
+    <div class="q">Fièvre ou maladie aiguë en cours ?</div>
+    <div class="opts" data-key="fievre"><button class="opt" data-v="oui">Oui</button><button class="opt" data-v="non">Non</button></div>
+    <div class="q">Antécédent de réaction allergique <u>grave</u> (œuf/ovalbumine ou vaccin antérieur) ?</div>
+    <div class="opts" data-key="allergieGrave"><button class="opt" data-v="oui">Oui</button><button class="opt" data-v="non">Non</button></div>
+  </div>
+
+  <!-- ÉTAPE 4 : CHOIX DU VACCIN -->
+  <div class="card locked" id="s4">
+    <h2><span class="step-n">4</span> Choix du vaccin</h2>
+    <div class="q">Allergie <u>non grave</u> à l'œuf ou aux aminosides (gentamicine, néomycine) ?</div>
+    <div class="opts" data-key="allergieOeuf"><button class="opt" data-v="oui">Oui</button><button class="opt" data-v="non">Non</button></div>
+    <div id="squalene-wrap">
+      <div class="q">Allergie aux fruits de mer ou au poisson (squalène) ?</div>
+      <div class="opts" data-key="squalene"><button class="opt" data-v="oui">Oui</button><button class="opt" data-v="non">Non</button></div>
+    </div>
+  </div>
+
+  <!-- ÉTAPE 5 : RAPPELS -->
+  <div class="card locked" id="s5">
+    <h2><span class="step-n">5</span> Autres vaccins et contexte</h2>
+    <div class="q">Autre vaccin au cours des 15 derniers jours ?</div>
+    <div class="opts" data-key="autreVaccin"><button class="opt" data-v="oui">Oui</button><button class="opt" data-v="non">Non</button></div>
+    <div id="lequel-wrap" class="hidden" style="margin-top:8px">
+      <input type="text" id="lequel" placeholder="Lequel ? (ex. Covid-19, pneumocoque, dTP…)" oninput="compute()">
+    </div>
+    <div class="q">Contexte (cocher si concerné)</div>
+    <div class="checks" id="ctx">
+      <label><input type="checkbox" data-c="shingrix"> Shingrix prévu</label>
+      <label><input type="checkbox" data-c="covid"> Vaccin Covid-19 prévu</label>
+      <label><input type="checkbox" data-c="grippeFaite"> Grippe déjà contractée cette saison</label>
+      <label><input type="checkbox" data-c="pic"> Pic épidémique proche</label>
+    </div>
+  </div>
+
+  <!-- VERDICT -->
+  <div class="verdict v-wait" id="verdict">
+    <h2>Conclusion</h2>
+    <div class="line">Renseignez l'âge pour commencer.</div>
+  </div>
+
+  <!-- AIDE-MÉMOIRE -->
+  <div class="memo">
+    <details>
+      <summary>📄 Les bons de prise en charge (CNAM, valables jusqu'au 31/01/2027)</summary>
+      <table>
+        <tr><th>Bon</th><th>Pour qui</th><th>Prescription</th><th></th></tr>
+        <tr><td><b>610d</b></td><td>Personnes éligibles à risque, 11 ans et plus</td><td>Sans prescription (le bon vaut prescription). Vaccin 100 %, injection : ticket modérateur sauf maternité ≥ 6e mois.</td><td><a href="bons/610d.pdf" target="_blank">PDF</a></td></tr>
+        <tr><td><b>610d-ALD</b></td><td>Idem, patient en ALD ciblée</td><td>Sans prescription. Vaccin et injection 100 %.</td><td><a href="bons/610d-ALD.pdf" target="_blank">PDF</a></td></tr>
+        <tr><td><b>610e</b></td><td>Enfants à risque de 6 mois à 10 ans</td><td>Prescription médecin ou sage-femme. Vaccin 100 %.</td><td><a href="bons/610e.pdf" target="_blank">PDF</a></td></tr>
+        <tr><td><b>610e-ALD</b></td><td>Idem, enfant en ALD ciblée</td><td>Prescription médecin ou sage-femme. Vaccin et injection 100 %.</td><td><a href="bons/610e-ALD.pdf" target="_blank">PDF</a></td></tr>
+        <tr><td><b>610f</b></td><td>Enfants de 2 à 17 ans sans comorbidité</td><td>Prescription (médecin, sage-femme, infirmier ou pharmacien ; avant 11 ans : médecin ou sage-femme). Vaccin 65 %.</td><td><a href="bons/610f.pdf" target="_blank">PDF</a></td></tr>
+        <tr><td><b>611</b></td><td>Vaccins hors grippe et Covid (pneumocoque, zona…)</td><td>Bon de prise en charge vaccin, à compléter par le prescripteur.</td><td><a href="bons/611.pdf" target="_blank">PDF</a></td></tr>
+      </table>
+    </details>
+    <details>
+      <summary>📘 Fiche FLUCELVAX</summary>
+      <ul>
+        <li>Inactivé trivalent, <b>à partir de 6 mois</b>, culture cellulaire : <b>sans protéine d'œuf, sans antibiotique, sans squalène</b>.</li>
+        <li>Enfant de 2 à 9 ans en primovaccination : dose pleine <span class="tag t-amber">volume à confirmer</span>, 1 dose puis rappel à 4 semaines.</li>
+        <li>Agiter avant manipulation.</li>
+        <li><span class="tag t-amber" style="margin-left:0">À clarifier avec l'équipe</span> règle « 1 an / 11 ans : 1 dose même en primovaccination ».</li>
+      </ul>
+    </details>
+    <details>
+      <summary>📘 Fiche FLUAD</summary>
+      <ul>
+        <li><b>À partir de 65 ans</b>, adjuvanté (squalène), aspect blanc laiteux.</li>
+        <li>Culture d'œuf, contient des aminosides (gentamicine, néomycine).</li>
+        <li>L'adjuvant compense la baisse de réponse immunitaire avec l'âge.</li>
+        <li>Pas de contre-indication biologique chez l'insuffisant rénal (élimination biliaire).</li>
+        <li>L'ameli recommande aussi Efluelda chez les 65 ans et plus.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>📘 Rappels systématiques</summary>
+      <ul>
+        <li><b>Shingrix</b> : pas de co-administration avec Flucelvax ni Fluad. Les autres vaccins peuvent être associés.</li>
+        <li><b>Covid-19</b> : même jour possible, en 2 points d'injection différents. Sinon, aucun délai minimal.</li>
+        <li><b>Grippe déjà contractée</b> : vacciner quand même (couverture plus large, pas de délai).</li>
+        <li><b>Femme enceinte</b> : à tout moment de la grossesse, protège aussi le bébé jusqu'à ses 6 mois. Injection à 100 % du 6e mois jusqu'à 12 jours après l'accouchement.</li>
+        <li><b>Autre vaccin dans les 15 derniers jours</b> : signaler au pharmacien ; aucune règle de délai n'est définie <span class="tag t-amber">conduite à confirmer</span>.</li>
+        <li><b>Non éligible adulte</b> : vaccin et injection non pris en charge, pas de bon, prescription obligatoire (le pharmacien peut prescrire).</li>
+        <li><b>11 à 17 ans sans comorbidité</b> : vaccination proposée, prise en charge à 65 % avec le bon 610f édité par le professionnel.</li>
+      </ul>
+    </details>
+  </div>
+
+  <div class="foot">
+    Sources : ameli.fr « La vaccination contre la grippe en 2026-2027 en pratique » (09/10/2026), ANSM, notes de l'équipe, bons CNAM 610d/610e/610f/611 (version 07/2026).
+    Les règles peuvent évoluer : en cas de doute, se référer au RCP et aux recommandations en vigueur.
+    Les mentions « à confirmer » signalent des points non vérifiés pour 2026-2027. Aucune donnée n'est enregistrée : le bon pré-rempli est généré dans le navigateur et disparaît à la fermeture.
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script>
+'use strict';
+const A = {}; // réponses (en mémoire seulement)
+const FILL = {immat:'', benef:'', naiss:'', organisme:''}; // champs du bon (mémoire seulement)
+
+/* ---- Bons officiels (fichiers dans ./bons/) ---- */
+const BONS = {
+  '610d':    {file:'610d.pdf',     label:"Bon 610d — personnes éligibles à risque, 11 ans et plus (vaccin 100 %, injection : ticket modérateur)"},
+  '610d-ALD':{file:'610d-ALD.pdf', label:"Bon 610d-ALD — personnes éligibles en ALD ciblée, 11 ans et plus (vaccin et injection 100 %)"},
+  '610e':    {file:'610e.pdf',     label:"Bon 610e — enfant à risque de 6 mois à 10 ans, sur prescription médecin / sage-femme (vaccin 100 %)"},
+  '610e-ALD':{file:'610e-ALD.pdf', label:"Bon 610e-ALD — enfant à risque en ALD ciblée, 6 mois à 10 ans, sur prescription (vaccin et injection 100 %)"},
+  '610f':    {file:'610f.pdf',     label:"Bon 610f — enfant de 2 à 17 ans sans comorbidité (vaccin 65 %)"},
+};
+// noms des champs AcroForm présents dans les PDF CNAM
+const PDF_FIELDS = {immat:'N° immat', benef:'Bénéficiaire', naiss:'Date', organisme:'Code organisme'};
+
+/* ---- boutons oui/non ---- */
+document.querySelectorAll('.opts').forEach(g=>{
+  const key=g.dataset.key;
+  g.querySelectorAll('.opt').forEach(b=>b.addEventListener('click',()=>{
+    g.querySelectorAll('.opt').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); A[key]=b.dataset.v; compute();
+  }));
+});
+document.querySelectorAll('.checks input').forEach(c=>c.addEventListener('change',()=>{
+  c.closest('label').classList.toggle('checked',c.checked); compute();
+}));
+
+function onAge(){
+  const v=document.getElementById('age').value;
+  document.getElementById('age-months-wrap').style.display = (v==='0') ? '' : 'none';
+  compute();
+}
+function chk(c){ return document.querySelector(`input[data-c="${c}"]`).checked; }
+function setAuto(c,on){ const i=document.querySelector(`input[data-c="${c}"]`); i.checked=on; i.closest('label').classList.toggle('checked',on); }
+function lock(id,locked){ document.getElementById(id).classList.toggle('locked',locked); }
+function show(id,on){ document.getElementById(id).classList.toggle('hidden',!on); }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function resetAll(){
+  for(const k in A) delete A[k];
+  for(const k in FILL) FILL[k]='';
+  document.querySelectorAll('.opt').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.checks input').forEach(c=>{ c.checked=false; c.closest('label').classList.remove('checked'); });
+  ['age','months','lequel'].forEach(id=>document.getElementById(id).value='');
+  onAge(); window.scrollTo(0,0);
+}
+
+/* ---- bloc « bon à sortir » dans la conclusion ---- */
+function bonHtml(code, note){
+  if(!code) return `<div class="line bon"><b>Bon à sortir :</b> aucun${note?' — '+note:''}</div>`;
+  const B=BONS[code];
+  return `<div class="bon">
+    <div class="line" style="margin:0"><b>Bon à sortir :</b> <span class="code">${code}</span> — ${B.label}${note?'<br><span class="hint" style="display:inline">'+note+'</span>':''}</div>
+    <div class="fill noprint">
+      <div class="full"><label>Bénéficiaire (nom et prénom)</label><input type="text" data-f="benef" value="${esc(FILL.benef)}" autocomplete="off"></div>
+      <div><label>N° d'immatriculation (NIR)</label><input type="text" data-f="immat" value="${esc(FILL.immat)}" autocomplete="off" inputmode="numeric"></div>
+      <div><label>Date et rang de naissance</label><input type="text" data-f="naiss" value="${esc(FILL.naiss)}" autocomplete="off" placeholder="JJ/MM/AAAA – 1"></div>
+      <div><label>Code organisme</label><input type="text" data-f="organisme" value="${esc(FILL.organisme)}" autocomplete="off"></div>
+    </div>
+    <div class="btns noprint">
+      <button class="btn primary" onclick="openBon('${code}')">🖨️ Ouvrir le bon pré-rempli</button>
+      <a class="btn ghost" href="bons/${B.file}" target="_blank">PDF vierge</a>
+    </div>
+    <div class="status" id="bon-status"></div>
+  </div>`;
+}
+// conserver la saisie des champs du bon entre deux re-rendus
+document.addEventListener('input', e=>{ if(e.target.dataset && e.target.dataset.f) FILL[e.target.dataset.f]=e.target.value; });
+
+async function openBon(code){
+  const st=document.getElementById('bon-status');
+  try{
+    st.textContent='Préparation du bon…';
+    const bytes=await fetch('bons/'+BONS[code].file).then(r=>{ if(!r.ok) throw new Error('PDF introuvable'); return r.arrayBuffer(); });
+    const pdf=await PDFLib.PDFDocument.load(bytes);
+    const form=pdf.getForm();
+    for(const k in PDF_FIELDS){
+      if(!FILL[k]) continue;
+      try{ form.getTextField(PDF_FIELDS[k]).setText(FILL[k]); }catch(e){ /* champ absent sur ce bon */ }
+    }
+    const out=await pdf.save();
+    const url=URL.createObjectURL(new Blob([out],{type:'application/pdf'}));
+    window.open(url,'_blank');
+    st.textContent='Bon ouvert dans un nouvel onglet : vérifier, compléter (spécialité, date, signature) puis imprimer.';
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  }catch(e){
+    st.textContent='Pré-remplissage impossible ('+e.message+') — ouverture du PDF vierge.';
+    window.open('bons/'+BONS[code].file,'_blank');
+  }
+}
+
+function compute(){
+  const ageStr=document.getElementById('age').value;
+  const age = ageStr==='' ? null : Number(ageStr);
+  const months = Number(document.getElementById('months').value||0);
+  const V=document.getElementById('verdict');
+  const out=(cls,html)=>{ V.className='verdict '+cls; V.innerHTML=html; };
+  const final = '<div class="final">Décision finale à valider par le pharmacien.</div>';
+  const fmt = (vaccin,pec,vig,orient,bon,bonNote)=>`<h2>Conclusion</h2>
+    <div class="line"><b>Vaccin proposé :</b> ${vaccin}</div>
+    <div class="line"><b>Prise en charge :</b> ${pec}</div>
+    ${bonHtml(bon,bonNote)}
+    <div class="line"><b>Points de vigilance :</b>${vig.length? '<ul>'+vig.map(x=>'<li>'+x+'</li>').join('')+'</ul>' : ' aucun point particulier'}</div>
+    ${orient? `<div class="line"><b>Orientation :</b> ${orient}</div>`:''}${final}`;
+  const ask = q=>out('v-wait',`<h2>Conclusion</h2><div class="line">Question suivante : <b>${q}</b></div>`);
+
+  ['s2','s3','s4','s5'].forEach(s=>lock(s,true));
+
+  /* Étape 1 : âge */
+  if(age===null || isNaN(age) || age<0){ ask("l'âge du patient"); return; }
+  if(age===0 && months<6){
+    out('v-stop', fmt('aucun','—',["Nourrisson de moins de 6 mois : aucun vaccin antigrippal.","Conseiller la vaccination de la mère enceinte et de l'entourage (cocooning)."],null,null,"aucune vaccination avant 6 mois"));
+    return;
+  }
+  if(age<11){
+    // enfant 6 mois – 10 ans : pas de vaccination à l'officine, mais on oriente vers le bon adapté
+    lock('s2',false); show('bon-wrap',false);
+    if(A.enceinte===undefined) A.enceinte='non';
+    const risque = chk('chronique')||chk('obesite')||chk('etab')||chk('entourage');
+    show('ald-wrap', risque);
+    let bon=null, note='', pec;
+    if(risque){
+      if(A.ald===undefined){ ask('enfant en ALD ciblée ?'); return; }
+      bon = A.ald==='oui' ? '610e-ALD' : '610e';
+      pec = '100 % (enfant à risque) — prescription du vaccin par un médecin ou une sage-femme';
+      note = "Le pharmacien complète la partie « délivrance » après prescription du médecin ou de la sage-femme.";
+    } else if(age>=2){
+      bon='610f'; pec='65 % (enfant sans comorbidité) — prescription obligatoire par un médecin ou une sage-femme avant 11 ans';
+      note = "Avant 11 ans, la prescription doit être faite par un médecin ou une sage-femme (pas par le pharmacien).";
+    } else {
+      pec='non prise en charge (enfant de moins de 2 ans sans facteur de risque)';
+    }
+    out('v-stop', fmt('orientation médecin / sage-femme + infirmier', pec,
+      ["De 6 mois à 10 ans : pas de vaccination à l'officine (le pharmacien vaccine à partir de 11 ans).","Flucelvax est utilisable dès 6 mois (enfant de 2 à 9 ans en primovaccination : 2 doses à 4 semaines <span class=\"confirm\">volume à confirmer</span>)."],
+      "Médecin ou sage-femme pour la prescription, infirmier pour l'injection.", bon, note));
+    return;
+  }
+
+  /* Étape 2 : prise en charge */
+  lock('s2',false);
+  const is65 = age>=65;
+  setAuto('age65', is65);
+  if(A.enceinte===undefined){ ask('femme enceinte ?'); return; }
+  const enc = A.enceinte==='oui';
+  setAuto('enc', enc);
+  const eligible = is65||enc||chk('chronique')||chk('obesite')||chk('etab')||chk('entourage')||chk('pro');
+  show('ald-wrap', eligible);
+  show('bon-wrap', eligible);
+  let pec, vig=[], orient=null, bon=null, bonNote='';
+  if(eligible){
+    if(A.ald===undefined){ ask('patient en ALD ciblée ?'); return; }
+    if(A.bon===undefined){ ask('bon de prise en charge déjà reçu ?'); return; }
+    bon = A.ald==='oui' ? '610d-ALD' : '610d';
+    pec = '100 % du vaccin avec bon (vaut prescription)' + (A.bon==='oui' ? ' — bon déjà reçu' : ' — <b>bon à remettre</b> par le pharmacien');
+    if(A.bon==='oui') bonNote = "Le patient a déjà son bon : utiliser celui-ci. Les boutons ci-dessous servent seulement s'il l'a oublié.";
+    if(enc) vig.push("Femme enceinte : injection prise en charge à 100 % du 6e mois de grossesse jusqu'à 12 jours après l'accouchement (sinon ticket modérateur). Vaccination possible à tout moment de la grossesse, protège aussi le bébé jusqu'à ses 6 mois.");
+    else if(A.ald!=='oui') vig.push("Injection : le patient règle le ticket modérateur (pas d'ALD ciblée).");
+    if(chk('pro')) vig.push("Professionnel de santé / en contact avec des personnes à risque : priorité les 4 premières semaines de campagne.");
+  } else if(age<=17){
+    bon='610f';
+    pec = '65 % avec le bon 610f édité par le professionnel';
+    vig.push("11 à 17 ans sans comorbidité : vaccination proposée, bon 610f à éditer (prescription possible par le pharmacien).");
+  } else {
+    pec = 'non prise en charge (vaccin et injection), pas de bon';
+    bonNote = 'prescription obligatoire (le pharmacien peut prescrire)';
+    vig.push("Adulte non éligible : <b>prescription obligatoire</b> (le pharmacien peut prescrire).");
+  }
+
+  /* Étape 3 : sécurité */
+  lock('s3',false);
+  if(A.fievre===undefined){ ask('fièvre ou maladie aiguë en cours ?'); return; }
+  if(A.fievre==='oui'){
+    out('v-warn', fmt('aucun aujourd\'hui — <b>reporter la vaccination</b>', pec, ["Fièvre ou maladie aiguë en cours : reporter l'injection, revoir le patient une fois rétabli."], null, bon, bonNote));
+    return;
+  }
+  if(A.allergieGrave===undefined){ ask('antécédent de réaction allergique grave ?'); return; }
+  if(A.allergieGrave==='oui'){
+    out('v-stop', fmt('orientation médecin', pec,
+      ["Antécédent de réaction allergique grave (œuf/ovalbumine ou vaccin antérieur) : pas d'injection à l'officine. <span class=\"confirm\">À confirmer : règle issue d'ameli 2025-2026, à vérifier pour 2026-2027.</span>"],
+      "Médecin.", bon, bonNote));
+    return;
+  }
+
+  /* Étape 4 : choix du vaccin */
+  lock('s4',false);
+  show('squalene-wrap', is65);
+  if(A.allergieOeuf===undefined){ ask("allergie non grave à l'œuf ou aux aminosides ?"); return; }
+  let vaccin;
+  if(A.allergieOeuf==='oui'){
+    vaccin='FLUCELVAX'; vig.push("Allergie non grave à l'œuf ou aux aminosides : Flucelvax (culture cellulaire, sans œuf ni antibiotique).");
+  } else if(!is65){
+    vaccin='FLUCELVAX';
+  } else {
+    if(A.squalene===undefined){ ask('allergie aux fruits de mer ou au poisson (squalène) ?'); return; }
+    if(A.squalene==='oui'){ vaccin='FLUCELVAX'; vig.push("Allergie fruits de mer / poisson : éviter l'adjuvant squalène → Flucelvax."); }
+    else { vaccin='FLUAD'; vig.push("65 ans et plus : Fluad adjuvanté (aspect blanc laiteux normal). L'ameli recommande aussi Efluelda dans cette tranche d'âge."); }
+  }
+  if(vaccin==='FLUCELVAX') vig.push("Flucelvax : agiter avant manipulation.");
+
+  /* Étape 5 : rappels */
+  lock('s5',false);
+  if(A.autreVaccin===undefined){ ask('autre vaccin au cours des 15 derniers jours ?'); return; }
+  show('lequel-wrap', A.autreVaccin==='oui');
+  if(A.autreVaccin==='oui'){
+    const l=document.getElementById('lequel').value.trim();
+    if(!l){ ask('lequel ?'); return; }
+    vig.push(`Autre vaccin dans les 15 derniers jours (<b>${esc(l)}</b>) : à signaler au pharmacien. Aucune règle de délai définie. <span class="confirm">Conduite à tenir à confirmer.</span>`);
+  }
+  if(chk('shingrix')) vig.push("Shingrix prévu : <b>pas de co-administration</b> avec Flucelvax ni Fluad (les autres vaccins peuvent être associés).");
+  if(chk('covid')) vig.push("Covid-19 : même jour possible, en 2 points d'injection différents. Sinon aucun délai minimal.");
+  if(chk('grippeFaite')) vig.push("Grippe déjà contractée cette saison : vacciner quand même (couverture plus large, pas de délai).");
+  if(chk('pic')) vig.push("Pic épidémique proche : conseiller de se vacciner rapidement.");
+
+  out(A.allergieOeuf==='oui'||A.squalene==='oui'||A.autreVaccin==='oui' ? 'v-warn':'v-ok', fmt(vaccin, pec, vig, orient, bon, bonNote));
+}
+compute();
+</script>
+</body>
+</html>
